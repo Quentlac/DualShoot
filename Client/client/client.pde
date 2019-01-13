@@ -157,6 +157,18 @@ PImage route;
 PImage chemin;
 PImage beton;
 
+Arbre[] arbre = new Arbre[300];
+
+class Arbre{
+  int x = 0;
+  int y = 0;
+  
+}
+int nb_arbre = 0;
+
+PImage arbreimg;
+
+
 void setup(){
   size(600,600); 
   
@@ -182,6 +194,9 @@ void setup(){
   route = loadImage("Images/route.jpg");
   chemin = loadImage("Images/chemin.jpg");
   beton = loadImage("Images/beton.jpg");
+  
+  PImage arbreimgtmp = loadImage("Images/trees.png");
+  arbreimg = arbreimgtmp.get(0,0,256,256);
   
   //on charge la map
   String[] txtMap = loadStrings("map");
@@ -216,7 +231,25 @@ void setup(){
       }      
     }
   }
-   
+  
+  for (int i = 0; i < 300; i++){
+    arbre[i] = new Arbre();  
+  } 
+  
+  //on charge les objets
+  //arbre
+  JSONObject jsonArbre = parseJSONObject(txtMap[1]);
+  
+  JSONArray arbreX = jsonArbre.getJSONArray("arbreX");
+  JSONArray arbreY = jsonArbre.getJSONArray("arbreY");
+  
+  nb_arbre = arbreX.size();
+  
+  for(int i = 0; i < nb_arbre;i++){
+    arbre[i].x = arbreX.getInt(i);
+    arbre[i].y = arbreY.getInt(i); 
+  }
+
 
 }
 
@@ -228,13 +261,14 @@ void draw(){
   
   //on test si l'id_client est valide pour effectuer les actions suivante
   if(id_client != -1){
-    affichage_grille();
+    affichage_map();
     
     test_commande();
     affiche_personnage();
     affiche_limite();
+    afficheObjet();
     
-    println(ping);
+    afficheMiniMap();
     
   } 
 }
@@ -339,12 +373,12 @@ void affiche_personnage(){
     int y = height/2 - (yPers - joueur[i].getY()); 
     
     fill(0,255,0);
-    ellipse(x,y,10,10);
+    ellipse(x,y,30,30);
   }  
   
   //On affiche ensuite notre personnage
   fill(255,0,0);
-  ellipse(width/2, width/2,20,20);
+  ellipse(width/2, width/2,30,30);
 }
 
 
@@ -387,15 +421,30 @@ void keyReleased(){
   }
 }
 
-void affichage_grille(){
+void affichage_map(){
   int xDep = int(xPers/60)*60 - xPers;
   int yDep = int(yPers/60)*60 - yPers;
   
+  //on calcul ou commencer dans le tableau map
+  int xTab = int(xPers/60)-5;
+  int yTab = int(yPers/60)-5;
+  
+  println(xTab+","+yTab);
+  
   stroke(200);
   
-  for(int i = 0; i < 10;i++){
-    line(xDep+(i*60),0,xDep+(i*60),height); 
-    line(0,yDep+(i*60),width,yDep+(i*60)); 
+  for(int y = 0; y < 11;y++){
+    for(int x = 0; x < 11;x++){
+      if((y+yTab) >= 0 && (x+xTab) >= 0 && (x+xTab) < 100 && (y+yTab) >= 0){
+        if(map[y+yTab][x+xTab] == 0)fill(255);
+        if(map[y+yTab][x+xTab] == 1)image(herbe,x*60+xDep,y*60+yDep,60,60);
+        if(map[y+yTab][x+xTab] == 2)image(sable,x*60+xDep,y*60+yDep,60,60);
+        if(map[y+yTab][x+xTab] == 3)image(eau,x*60+xDep,y*60+yDep,60,60);
+        if(map[y+yTab][x+xTab] == 4)image(route,x*60+xDep,y*60+yDep,60,60);
+        if(map[y+yTab][x+xTab] == 5)image(chemin,x*60+xDep,y*60+yDep,60,60);
+        if(map[y+yTab][x+xTab] == 6)image(beton,x*60+xDep,y*60+yDep,60,60);  
+      }
+    }
   }
   
   stroke(0);
@@ -411,9 +460,45 @@ void affiche_limite(){
   text(xPers+","+yPers,100,100);
   
   strokeWeight(5);
-  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 0),height/2 - (yPers - 3000));
-  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 3000),height/2 - (yPers - 0));
-  line(width/2 - (xPers - 0),height/2 - (yPers - 3000),width/2 - (xPers - 3000),height/2 - (yPers - 3000));
-  line(width/2 - (xPers - 3000),height/2 - (yPers - 0),width/2 - (xPers - 3000),height/2 - (yPers - 3000));
+  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 0),height/2 - (yPers - 6000));
+  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 6000),height/2 - (yPers - 0));
+  line(width/2 - (xPers - 0),height/2 - (yPers - 6000),width/2 - (xPers - 6000),height/2 - (yPers - 6000));
+  line(width/2 - (xPers - 6000),height/2 - (yPers - 0),width/2 - (xPers - 6000),height/2 - (yPers - 6000));
   strokeWeight(1);
+}
+
+void afficheMiniMap(){
+  fill(255);
+  
+  rect(489,489,101,101);
+  
+  for(int i = 0; i < 100;i++){
+    for(int j = 0; j < 100; j++){
+      if(map[i][j] == 0)fill(255);
+      if(map[i][j] == 1)image(herbe,j+490,i+490,1,1);
+      if(map[i][j] == 2)image(sable,j+490,i+490,1,1);
+      if(map[i][j] == 3)image(eau,j+490,i+490,1,1);
+      if(map[i][j] == 4)image(route,j+490,i+490,1,1);
+      if(map[i][j] == 5)image(chemin,j+490,i+490,1,1);
+      if(map[i][j] == 6)image(beton,j+490,i+490,1,1);      
+      
+    }  
+  }
+  fill(255,0,0);
+  stroke(255,0,0);
+  ellipse((xPers/60)+489,(yPers/60)+489,3,3);
+  stroke(0);
+  
+  
+}
+
+void afficheObjet(){
+  for(int i = 0; i < nb_arbre;i++){
+    int x = width/2 - (xPers - arbre[i].x); 
+    int y = height/2 - (yPers - arbre[i].y); 
+    
+    
+    image(arbreimg,x,y,70,70);
+  }    
+  
 }

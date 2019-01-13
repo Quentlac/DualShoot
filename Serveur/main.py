@@ -3,6 +3,7 @@ import select
 import time
 import os
 import json
+from math import *
 
 class Joueur:
 	x = 0
@@ -49,6 +50,22 @@ class Joueur:
 	def getAngle(self):
 		return self.angle
 
+class Arbre:
+	x = 0
+	y = 0
+
+	pv = 100
+
+	def setPosition(self,setX,setY):
+		self.x = setX
+		self.y = setY
+
+	def getPosX(self):
+		return self.x
+
+	def getPosY(self):
+		return self.y
+
 
 #Initialisation du Serveur
 main_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -69,6 +86,47 @@ liste_client = []
 nb_joueur = 0
 
 joueur = []
+
+arbre = []
+
+#fond de la map(herbe,sable,eau...)
+map_game = []
+
+
+#on charge la map
+filemap = open("map", "r")
+filemapjson = filemap.read()
+
+mapJson = json.loads(filemapjson)
+
+for loop in range(10000):
+	map_game.append(mapJson["map"][loop])
+
+#arbre
+for loop in range(len(mapJson["arbreX"])):
+	arbretmp = Arbre()
+	arbretmp.setPosition(mapJson["arbreX"][loop],mapJson["arbreY"][loop])
+
+	arbre.append(arbretmp)
+
+
+
+#on definis une fonction capable de detecter une eventuel colision entre deux elements.
+def detectColision(x, y):
+	#Colision entre le joueur et les arbres
+	
+	#on prend chaque arbre un par un
+	for loop2 in range(len(arbre)):
+		#on considere un arbre comme un cercle, il va donc falloir calculer la distance entre le joueur et l'arbre		
+		
+		#pythagore
+		#les -35 permettent de specifier le centre de l'arbre pas l'angle
+		distance = sqrt(abs(x - arbre[loop2].getPosX()-35)*abs(x - arbre[loop2].getPosX()-35)+abs(y - arbre[loop2].getPosY()-35)*abs(y - arbre[loop2].getPosY()-35))
+		if(distance < 35):
+			return 1
+	
+
+
 
 
 
@@ -170,16 +228,20 @@ while True:
 			cmd = json_msg['cmd']
 
 			if(cmd.find("RIGHT") != -1):
-				joueur[id_client].moveToRight(vitesse)
+				if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY()) != 1):
+					joueur[id_client].moveToRight(vitesse)
 
 			if(cmd.find("LEFT") != -1):
-				joueur[id_client].moveToLeft(vitesse)
+				if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY()) != 1):
+					joueur[id_client].moveToLeft(vitesse)
 			
 			if(cmd.find("UP") != -1):
-				joueur[id_client].moveToUp(vitesse)
+				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse) != 1):
+					joueur[id_client].moveToUp(vitesse)
 
 			if(cmd.find("DOWN") != -1):
-				joueur[id_client].moveToDown(vitesse)
+				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse) != 1):
+					joueur[id_client].moveToDown(vitesse)
 			
 			
 			

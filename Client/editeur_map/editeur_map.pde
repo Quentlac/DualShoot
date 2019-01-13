@@ -14,7 +14,21 @@ PImage route;
 PImage chemin;
 PImage beton;
 
+PImage arbreimg;
+
 PrintWriter filemap;
+
+Arbre[] arbre = new Arbre[300];
+
+class Arbre{
+  int x = 0;
+  int y = 0;
+  
+  int pv = 0;
+  
+}
+
+int nb_arbre = 0;
 
 void setup(){
   size(660,600);
@@ -25,45 +39,43 @@ void setup(){
   chemin = loadImage("Images/chemin.jpg");
   beton = loadImage("Images/beton.jpg");
   
+  arbreimg = loadImage("Images/trees.png");
+  
   for(int i = 0; i < 100;i++){
     for(int j = 0; j < 100;j++){
       map[i][j] = 1;
     }
   }
   
+  for (int i = 0; i < 300; i++) {
+    arbre[i] = new Arbre();  
+  } 
+  
   //on charge la map
   String[] txtMap = loadStrings("map");
-  
-  if(txtMap[0].length() != 10000){
-    println("Fichier map corrompu");  
-  }
-  else{
-    for(int i = 0; i < 100;i++){
-      for(int j = 0; j < 100;j++){
-        if(txtMap[0].charAt(i*100+j) == '0'){
-          map[i][j] = 0;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '1'){
-          map[i][j] = 1;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '2'){
-          map[i][j] = 2;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '3'){
-          map[i][j] = 3;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '4'){
-          map[i][j] = 4;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '5'){
-          map[i][j] = 5;  
-        }
-        if(txtMap[0].charAt(i*100+j) == '6'){
-          map[i][j] = 6;  
-        }
-      }      
+
+  //on charge les objets
+  //arbre
+  JSONObject jsonMap = parseJSONObject(txtMap[0]);
+  JSONArray mapTab = jsonMap.getJSONArray("map");
+  for(int i = 0; i < 100;i++){
+    for(int j = 0; j < 100;j++){
+      map[i][j] = mapTab.getInt(i*100+j);
     }
   }
+  
+  JSONArray arbreX = jsonMap.getJSONArray("arbreX");
+  JSONArray arbreY = jsonMap.getJSONArray("arbreY");
+  
+  nb_arbre = arbreX.size();
+  
+  for(int i = 0; i < nb_arbre;i++){
+    arbre[i].x = arbreX.getInt(i);
+    arbre[i].y = arbreY.getInt(i); 
+  }
+  
+  
+  
   
 }
 
@@ -80,7 +92,9 @@ void draw(){
   afficheTuile();
   deplaceMap();
   saveMap();
+  afficheObjet();
   
+  afficheObjetCurseur();
   afficheMiniMap();
   
   
@@ -134,12 +148,22 @@ void afficheInventaire(){
   image(chemin,0,240,60,60);
   noFill();
   rect(0,240,60,60);
+  strokeWeight(1);
   
   //beton
   if(curseurInventaire == 5)strokeWeight(3);
   image(beton,0,300,60,60);
   noFill();
   rect(0,300,60,60);
+  strokeWeight(1);
+  
+  //arbre
+  if(curseurInventaire == 6)strokeWeight(3);
+  PImage arbreCut = arbreimg.get(0,0,256,256);
+  image(arbreCut,0,360,60,60);
+  noFill();
+  rect(0,360,60,60);
+  strokeWeight(1);
   
   strokeWeight(5);
   stroke(0);
@@ -152,7 +176,7 @@ void afficheInventaire(){
 
 void testPosInvent(){
   if(mousePressed == true){
-    if(mouseX < 60 && mouseY < 360){
+    if(mouseX < 60 && mouseY < 420){
       curseurInventaire = int(mouseY / 60);  
     }
   }
@@ -161,7 +185,18 @@ void testPosInvent(){
 void setTuile(){
   if(mousePressed == true){
     if(mouseX >= 60){
-      map[posY+int(mouseY / 60)][posX+int((mouseX-60) / 60)] = curseurInventaire + 1;
+      if(curseurInventaire < 6){
+        map[posY+int(mouseY / 60)][posX+int((mouseX-60) / 60)] = curseurInventaire + 1;
+      }
+      else{
+        //objet(arbre, maison...)
+        if(nb_arbre < 300){
+          arbre[nb_arbre].x = posX*60 + (mouseX - 35);
+          arbre[nb_arbre].y = posY*60 + (mouseY - 35);
+          nb_arbre++;
+          delay(300);
+        }
+      }
     }
   }  
 }
@@ -225,16 +260,34 @@ void saveMap(){
   if(keyPressed == true){
     if(key == ' '){
       
-      String name = "map"+millis()+".txt";
+      String name = "map";
       
       filemap = createWriter(name);
       //SAUVEGARDE
       println("Enregistrement...");
+      
+      filemap.print("{\"map\": [");
       for(int i = 0; i < 100;i++){
         for(int j = 0; j < 100;j++){
           filemap.print(map[i][j]); 
+          if(i*100+j != 9999)filemap.print(",");
         }
       } 
+      filemap.print("],");;
+      //arbre
+      filemap.print("\"arbreX\": [");
+      for(int i = 0; i < nb_arbre;i++){
+        filemap.print(arbre[i].x);
+        if(i != nb_arbre-1)filemap.print(",");
+      }
+      filemap.print("], \"arbreY\": [");
+      for(int i = 0; i < nb_arbre;i++){
+        filemap.print(arbre[i].y);     
+        if(i != nb_arbre-1)filemap.print(",");
+      }
+      filemap.print("]}");
+      
+      
       filemap.flush();
       filemap.close();
       delay(5000);
@@ -260,10 +313,41 @@ void afficheMiniMap(){
       
     }  
   }
+  
+  //on affiche tous les arbres
+  stroke(0,255,0);
+  if(curseurInventaire == 6){
+    //on affiche les arbres
+    for(int i = 0; i < nb_arbre;i++){
+      fill(0,255,0);  
+      ellipse((arbre[i].x/60)+550,(arbre[i].y/60)+490,3,3);
+    }
+  }
+  
   noFill();
   stroke(255,0,0);
   rect(posX+549,posY+489,12,12);
+  
+  
   stroke(0);
+  
+}
+
+void afficheObjetCurseur(){
+  if(curseurInventaire == 6){
+    PImage arbreCut = arbreimg.get(0,0,256,256);
+    image(arbreCut,mouseX-35,mouseY-35,70,70);
+  }
+    
+  
+}
+
+void afficheObjet(){
+  //arbre
+  for(int i = 0; i < nb_arbre;i++){
+    PImage arbreCut = arbreimg.get(0,0,256,256);
+    image(arbreCut,arbre[i].x - posX*60,arbre[i].y - posY*60,70,70);      
+  }
   
   
 }
