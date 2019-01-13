@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <headerType>gui</headerType>
+  <dontWrapJar>true</dontWrapJar>
+  <downloadUrl>http://java.com/download</downloadUrl>
+  <outfile>/home/quentin/Documents/Jeu_WW_reseau/Client/client/application.windows32/client.exe</outfile>
+  <icon>/home/quentin/processing-3.4/modes/java/application/sketch.ico</icon>
+  <classPath>
+    <mainClass>client</mainClass>
+    <cp>lib/client.jar</cp>
+    <cp>lib/core.jar</cp>
+    <cp>lib/jogl-all.jar</cp>
+    <cp>lib/gluegen-rt.jar</cp>
+    <cp>lib/jogl-all-natives-windows-i586.jar</cp>
+    <cp>lib/gluegen-rt-natives-windows-i586.jar</cp>
+    <cp>lib/net.jar</cp>
+  </classPath>
+  <jre>
+    <minVersion>1.8.0_74</minVersion>
+    <opt>-Djna.nosys=true</opt>
+    <opt>-Djava.library.path="%EXEDIR%\lib"</opt>
+  </jre>
+</launch4jConfig>

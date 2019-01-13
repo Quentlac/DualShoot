@@ -119,6 +119,9 @@ class Item{
   }
 }
 
+//tableau pour charger la map
+int[][] map = new int[100][100];
+
 long regul_send = 0;
 
 int nb_joueur = 0;
@@ -143,6 +146,17 @@ String pseudo = "";
 int xPers = 0;
 int yPers = 0;
 
+//variable pour calculer le ping
+long ping_millis = 0;
+long ping = 0;
+
+PImage herbe;
+PImage sable;
+PImage eau;
+PImage route;
+PImage chemin;
+PImage beton;
+
 void setup(){
   size(600,600); 
   
@@ -160,6 +174,49 @@ void setup(){
   for (int i = 0; i < 100; i++) {
     item[i] = new Item();
   } 
+  
+  //on charge les images
+  herbe = loadImage("Images/herbe.jpg");
+  sable = loadImage("Images/sable.jpg");
+  eau = loadImage("Images/eau.jpg");
+  route = loadImage("Images/route.jpg");
+  chemin = loadImage("Images/chemin.jpg");
+  beton = loadImage("Images/beton.jpg");
+  
+  //on charge la map
+  String[] txtMap = loadStrings("map");
+  
+  if(txtMap[0].length() != 10000){
+    println("Fichier map corrompu");  
+  }
+  else{
+    for(int i = 0; i < 100;i++){
+      for(int j = 0; j < 100;j++){
+        if(txtMap[0].charAt(i*100+j) == '0'){
+          map[i][j] = 0;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '1'){
+          map[i][j] = 1;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '2'){
+          map[i][j] = 2;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '3'){
+          map[i][j] = 3;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '4'){
+          map[i][j] = 4;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '5'){
+          map[i][j] = 5;  
+        }
+        if(txtMap[0].charAt(i*100+j) == '6'){
+          map[i][j] = 6;  
+        }
+      }      
+    }
+  }
+   
 
 }
 
@@ -175,6 +232,9 @@ void draw(){
     
     test_commande();
     affiche_personnage();
+    affiche_limite();
+    
+    println(ping);
     
   } 
 }
@@ -183,6 +243,9 @@ void draw(){
 void connect_serveur(){
   if (c.available()>0){
     delay(2);
+    //on calcul le ping
+    ping = millis() - ping_millis;
+    
     String data = "";
     data = c.readStringUntil('}');  
 
@@ -194,7 +257,10 @@ void connect_serveur(){
           id_client = json.getInt("ID");  
         }
         else{
-          //On commence par récupérer la position des personnages 
+          //On commence par récupérer la position de nous
+          xPers = json.getInt("X");
+          yPers = json.getInt("Y");
+          
           JSONArray posX = json.getJSONArray("pX");
           JSONArray posY = json.getJSONArray("pY");
           
@@ -214,8 +280,10 @@ void connect_serveur(){
 
 void test_commande(){
   //regul_send sert à ne pas saturer le serveur en régulant l'envoi d'une requete toutes les 50ms
-  if(millis() - regul_send > 100){
+  if(millis() - regul_send > 90){
     regul_send = millis();
+    
+    ping_millis = millis();
     
     float x = mouseX-300;
     float y = mouseY-300;
@@ -237,10 +305,22 @@ void test_commande(){
     }
     if(key_RIGHT + key_LEFT + key_UP + key_DOWN + key_E > 0){
       String message_cmd = "";
-      if(key_RIGHT == 1)message_cmd = message_cmd + "RIGHT;";
-      if(key_LEFT == 1)message_cmd = message_cmd + "LEFT;";
-      if(key_UP == 1)message_cmd = message_cmd + "UP;";
-      if(key_DOWN == 1)message_cmd = message_cmd + "DOWN;";
+      
+      int vitesse = 3;
+      
+      if(key_RIGHT == 1){
+        message_cmd = message_cmd + "RIGHT;";
+        
+      }
+      if(key_LEFT == 1){
+        message_cmd = message_cmd + "LEFT;";
+      }
+      if(key_UP == 1){
+        message_cmd = message_cmd + "UP;";
+      }
+      if(key_DOWN == 1){
+        message_cmd = message_cmd + "DOWN;";
+      }
       if(key_E == 1)message_cmd = message_cmd + "TAKE;";
       c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"ang\": "+angle_arme+", \"pseudo\": \""+pseudo+"\"}");    
     }
@@ -251,16 +331,7 @@ void test_commande(){
   }
 }
 
-void affiche_personnage(){
-   
-  //il faut récupérer les coordonées de notre personnage pour afficher les autres en fonctions de nous
-  //Les coordonées de notre perso correspondent a la valeur numero id_client du tableau des joueurs
-  
-  xPers = joueur[id_client].getX();
-  yPers = joueur[id_client].getY();
-  
-  println(xPers+","+yPers);
-  
+void affiche_personnage(){  
   //on affiche tous les personnages (sauf le notre)
   
   for(int i = 0; i < nb_joueur;i++){
@@ -317,17 +388,32 @@ void keyReleased(){
 }
 
 void affichage_grille(){
-  int xDep = xPers - int(xPers/10)*10;
-  int yDep = yPers - int(yPers/10)*10;
+  int xDep = int(xPers/60)*60 - xPers;
+  int yDep = int(yPers/60)*60 - yPers;
   
   stroke(200);
   
-  for(int i = 0; i < 60;i++){
-    line(xDep+(i*10),0,xDep+(i*10),height); 
-    line(0,yDep+(i*10),width,yDep+(i*10)); 
+  for(int i = 0; i < 10;i++){
+    line(xDep+(i*60),0,xDep+(i*60),height); 
+    line(0,yDep+(i*60),width,yDep+(i*60)); 
   }
   
   stroke(0);
   
   
+  
+  
+}
+
+void affiche_limite(){
+  textSize(25);
+  fill(255,0,0);
+  text(xPers+","+yPers,100,100);
+  
+  strokeWeight(5);
+  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 0),height/2 - (yPers - 3000));
+  line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 3000),height/2 - (yPers - 0));
+  line(width/2 - (xPers - 0),height/2 - (yPers - 3000),width/2 - (xPers - 3000),height/2 - (yPers - 3000));
+  line(width/2 - (xPers - 3000),height/2 - (yPers - 0),width/2 - (xPers - 3000),height/2 - (yPers - 3000));
+  strokeWeight(1);
 }

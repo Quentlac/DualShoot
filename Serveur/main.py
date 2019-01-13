@@ -14,6 +14,7 @@ class Joueur:
 
 	equipe = 1
 
+
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
 
@@ -100,16 +101,23 @@ while True:
 		message = "{"
 		message = message + "ID:" + str(id_joueur)+","
 
+		message = message + "X:" + str(joueur[id_joueur].getPosX())+","
+		message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
+
 		#la position de chaque joueur
 		message = message + "pX:[";
 		for loop in range(nb_joueur):
-			message = message + str(joueur[loop].getPosX()) + ",";
+			#On affiche que les joueurs en vie(non deco) et 
+			#ceux qui sont dans le champ de vision
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				message = message + str(joueur[loop].getPosX()) + ",";
 
 		message = message + "],"
 
 		message = message + "pY:[";
 		for loop in range(nb_joueur):
-			message = message + str(joueur[loop].getPosY()) + ",";
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				message = message + str(joueur[loop].getPosY()) + ",";
 
 		message = message + "],"
 
@@ -130,6 +138,7 @@ while True:
 		except socket.error:
 			print("Client("+str(id_joueur)+") est parti")
 			liste_client[id_joueur] = 0
+			joueur[id_joueur].supprVie(100)
 
 		id_joueur += 1
 
@@ -155,7 +164,7 @@ while True:
 			id_client = json_msg['ID']
 
 			#on cree une variable vitesse pour pouvoir changer plus rapidement
-			vitesse = 5
+			vitesse = 10
 
 
 			cmd = json_msg['cmd']
