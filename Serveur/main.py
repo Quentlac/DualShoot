@@ -15,6 +15,10 @@ class Joueur:
 
 	equipe = 1
 
+	#Cette variable permet de dire au client si le joueur marche ou tir afin d'adapter les animations
+	#0=fixe 1=marche 2=tir 3=marche+tir
+	status = 0
+
 
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
@@ -49,6 +53,12 @@ class Joueur:
 
 	def getAngle(self):
 		return self.angle
+
+	def setStatus(self,nS):
+		self.status = nS
+
+	def getStatus(self):
+		return self.status
 
 class Arbre:
 	x = 0
@@ -112,7 +122,7 @@ for loop in range(len(mapJson["arbreX"])):
 
 
 #on definis une fonction capable de detecter une eventuel colision entre deux elements.
-def detectColision(x, y):
+def detectColision(x, y, pers):
 	#Colision entre le joueur et les arbres
 	
 	#on prend chaque arbre un par un
@@ -124,10 +134,25 @@ def detectColision(x, y):
 		distance = sqrt(abs(x - arbre[loop2].getPosX()-35)*abs(x - arbre[loop2].getPosX()-35)+abs(y - arbre[loop2].getPosY()-35)*abs(y - arbre[loop2].getPosY()-35))
 		if(distance < 35):
 			return 1
+
+	#On calcule la colision entre les personnages
+	for loop2 in range(nb_joueur):
+		#On ne vas pas detecter une colision avec le joueur lui meme!!
+		if(pers != loop2):
+			#On test aussi que le pers est encore en vie/connecte
+			if(joueur[loop2].getVie() > 0):
+				distance = sqrt(abs(x - joueur[loop2].getPosX())*abs(x - joueur[loop2].getPosX())+abs(y - joueur[loop2].getPosY())*abs(y - joueur[loop2].getPosY()))
+
+				if(distance < 30):
+					return 1	
+
+	#On calcule maintenant les collisions avec les limites de la map:
+	if(x >= 6000 or x < 0 or y >= 6000 or y < 0):
+		return 1
 	
 
 
-
+message_tchat = "-"
 
 
 while True:
@@ -142,6 +167,7 @@ while True:
 		liste_client.append(socket_client)
 
 		print("Nouveau client connecte")
+		message_tchat = "Nouvelle pers connect! ("+str(nb_joueur)+")"
 
 		#on cree le joueur
 		
@@ -153,7 +179,7 @@ while True:
 
 		nb_joueur = nb_joueur + 1
 
-	#on envoi toutes les infos au joueurs
+	#on envoi toutes les infos aux joueurs
 	id_joueur = 0
 	for client in liste_client:
 		message = "{"
@@ -168,14 +194,16 @@ while True:
 			#On affiche que les joueurs en vie(non deco) et 
 			#ceux qui sont dans le champ de vision
 			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				message = message + str(joueur[loop].getPosX()) + ",";
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].getPosX()) + ",";
 
 		message = message + "],"
 
 		message = message + "pY:[";
 		for loop in range(nb_joueur):
 			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				message = message + str(joueur[loop].getPosY()) + ",";
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].getPosY()) + ",";
 
 		message = message + "],"
 
@@ -183,9 +211,32 @@ while True:
 
 		message = message + "pAngle:[";
 		for loop in range(nb_joueur):
-			message = message + str(joueur[loop].getAngle()) + ",";
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].getAngle()) + ",";
 
 		message = message + "],"
+
+		#On envoi le status des joueurs:
+		message = message + "pStatus:[";
+		for loop in range(nb_joueur):
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].getStatus()) + ",";
+
+		message = message + "],"
+
+		message = message + "tchat: \""
+
+		#On envoi le tchat si il y a un msg a envoye:
+		if(message_tchat != "-"):
+			message = message + message_tchat
+			message_tchat = "-"
+		else:
+			#le - signifie rien pour le client
+			message = message + "-"	
+
+		message = message + "\""	
 
 		message = message + "}"
 
@@ -195,6 +246,8 @@ while True:
 				client.send(message)
 		except socket.error:
 			print("Client("+str(id_joueur)+") est parti")
+			message_tchat = "Une pers est partie! ("+str(id_joueur)+")"
+
 			liste_client[id_joueur] = 0
 			joueur[id_joueur].supprVie(100)
 
@@ -211,6 +264,8 @@ while True:
 		
 		message = client.recv(1024)
 
+		#print(message)
+
 		#On doit traiter le message qui normalement est du JSON si tous va bien.
 
 		try:
@@ -221,6 +276,8 @@ while True:
 		if(message_valide == 1):
 			id_client = json_msg['ID']
 
+			joueur[id_client].setAngle(json_msg['ang'])
+
 			#on cree une variable vitesse pour pouvoir changer plus rapidement
 			vitesse = 10
 
@@ -228,22 +285,27 @@ while True:
 			cmd = json_msg['cmd']
 
 			if(cmd.find("RIGHT") != -1):
-				if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY()) != 1):
+				if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) != 1):
 					joueur[id_client].moveToRight(vitesse)
 
 			if(cmd.find("LEFT") != -1):
-				if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY()) != 1):
+				if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) != 1):
 					joueur[id_client].moveToLeft(vitesse)
 			
 			if(cmd.find("UP") != -1):
-				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse) != 1):
+				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) != 1):
 					joueur[id_client].moveToUp(vitesse)
 
 			if(cmd.find("DOWN") != -1):
-				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse) != 1):
+				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) != 1):
 					joueur[id_client].moveToDown(vitesse)
 			
-			
+			#On regarde maintenant si je joueur veux tirer
+			tir = json_msg['tir']
+			if(tir == "1"):
+				joueur[id_client].setStatus(2)
+			else:
+				joueur[id_client].setStatus(0)
 			
 
 			

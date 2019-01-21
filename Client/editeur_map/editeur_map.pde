@@ -51,7 +51,7 @@ void setup(){
     arbre[i] = new Arbre();  
   } 
   
-  //on charge la map
+  /*//on charge la map
   String[] txtMap = loadStrings("map");
 
   //on charge les objets
@@ -72,7 +72,7 @@ void setup(){
   for(int i = 0; i < nb_arbre;i++){
     arbre[i].x = arbreX.getInt(i);
     arbre[i].y = arbreY.getInt(i); 
-  }
+  }*/
   
   
   
@@ -85,7 +85,7 @@ void draw(){
   background(255);
   
   afficheGrille();
-  afficheInventaire();
+  
   testPosInvent();
   
   setTuile();
@@ -93,7 +93,7 @@ void draw(){
   deplaceMap();
   saveMap();
   afficheObjet();
-  
+  afficheInventaire();
   afficheObjetCurseur();
   afficheMiniMap();
   
