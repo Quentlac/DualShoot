@@ -19,6 +19,9 @@ class Joueur:
 	#0=fixe 1=marche 2=tir 3=marche+tir
 	status = 0
 
+	#cette variable permet de reguler le nombre de balle tire.
+	cadence_tir = 0
+
 
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
@@ -60,6 +63,12 @@ class Joueur:
 	def getStatus(self):
 		return self.status
 
+	def setCadTir(self,valeur):
+		self.cadence_tir = valeur
+
+	def getCadTir(self):
+		return self.cadence_tir
+
 class Arbre:
 	x = 0
 	y = 0
@@ -75,6 +84,42 @@ class Arbre:
 
 	def getPosY(self):
 		return self.y
+
+class Balle:
+	#Variable qui contient la position de depart des balles
+	x_dep = 0
+	y_dep = 0
+
+
+	dist = 15
+	direc = 0
+
+	id_joueur = 0
+
+
+	def init(self,id_j,direction,x,y):
+		self.id_joueur = id_j
+		self.direc = direction
+		self.depX = x
+		self.depY = y
+
+	def move(self,speed):
+		self.dist = self.dist + speed
+
+	def getDist(self):
+		return self.dist
+
+	def getDirec(self):
+		return self.direc
+
+	def getPosX(self):
+		return int(sin(radians(90-self.direc))*self.dist)+self.depX
+
+	def getPosY(self):
+		return int(cos(radians(90-self.direc))*self.dist)+self.depY
+
+	def getIdJoueur(self):
+		return self.id_joueur
 
 
 #Initialisation du Serveur
@@ -98,6 +143,7 @@ nb_joueur = 0
 joueur = []
 
 arbre = []
+balle = []
 
 #fond de la map(herbe,sable,eau...)
 map_game = []
@@ -226,6 +272,22 @@ while True:
 
 		message = message + "],"
 
+		#On envoi maintenant la position des balles
+		message = message + "bX:[";
+		for loop in range(len(balle)):
+			#celles qui sont dans le champ de vision
+			if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				message = message + str(balle[loop].getPosX()) + ",";
+
+		message = message + "],"
+
+		message = message + "bY:[";
+		for loop in range(len(balle)):
+			if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				message = message + str(balle[loop].getPosY()) + ",";
+
+		message = message + "],"
+
 		message = message + "tchat: \""
 
 		#On envoi le tchat si il y a un msg a envoye:
@@ -304,8 +366,27 @@ while True:
 			tir = json_msg['tir']
 			if(tir == "1"):
 				joueur[id_client].setStatus(2)
+
+				#On cree une balle pour le tir
+				if(time.time() - joueur[id_client].getCadTir() > 0.3):
+					#on remet le 'compteur' a 0
+					joueur[id_client].setCadTir(time.time())
+					nouvelle_balle = Balle()
+					nouvelle_balle.init(id_client,json_msg['ang'],joueur[id_client].getPosX(),joueur[id_client].getPosY())
+					balle.append(nouvelle_balle)
 			else:
 				joueur[id_client].setStatus(0)
+	
+	#On fait bouger toutes les balles tirees
+	for loop in range(len(balle)):
+		#La condition si dessous permet d'eviter le bug(IndexOutOfRange) dans le cas ou l'on supprime une balle
+		if(loop < len(balle)):
+			balle[loop].move(10)
+			#On detect la colision avec les autres objets
+			if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == 1):
+				#La balle touche on va donc la supprimer
+				del balle[loop]
+
 			
 
 			

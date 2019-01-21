@@ -292,6 +292,7 @@ void draw(){
     setAnglePers();
     affichage_map();
     
+    afficheBalle();
     affiche_personnage();
     affiche_limite();
     afficheObjet();
@@ -333,6 +334,9 @@ void connect_serveur(){
           JSONArray angleTab = json.getJSONArray("pAngle");
           JSONArray statusTab = json.getJSONArray("pStatus");
           
+          JSONArray balleX = json.getJSONArray("bX");
+          JSONArray balleY = json.getJSONArray("bY");
+          
           //on actualise en local
           
           //la taille du tableau correspond au nombre de joueur
@@ -342,6 +346,13 @@ void connect_serveur(){
             joueur[i].setY(posY.getInt(i));
             joueur[i].setAngle(angleTab.getInt(i));
             joueur[i].setStatus(statusTab.getInt(i));
+          }
+          
+          //la taille du tableau correspond au nombre de balle
+          nb_balle = balleX.size();
+          for(int i = 0; i < nb_balle;i++){
+            balle[i].setX(balleX.getInt(i));  
+            balle[i].setY(balleY.getInt(i)); 
           }
           
           //on recupère aussi le tchat serveur
@@ -590,6 +601,21 @@ void setAnglePers(){
   
   angle = 360 - angle;  
   
+  
+}
+
+void afficheBalle(){
+  //Ici on affiche toutes les balles
+  for(int i = 0; i < nb_balle;i++){
+    int x = width/2 - (xPers - balle[i].getX()); 
+    int y = height/2 - (yPers - balle[i].getY()); 
+    
+    
+    fill(0);
+    stroke(0);
+    ellipse(x,y,2,2);
+    
+  }
   
 }
 
