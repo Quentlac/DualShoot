@@ -98,6 +98,40 @@ class Balle{
   }
 }
 
+HitMarker[] hitmarker = new HitMarker[10];
+
+class HitMarker{
+  int x = 0;
+  int y = 0;  
+  
+  int valeur = 0;
+  long tmp_aff = 0;
+  
+  void setX(int Nx){
+    x = Nx;      
+  }
+  
+  void setY(int Ny){
+    y = Ny;      
+  }
+  
+  int getX(){
+    return x;  
+  }
+  
+  int getY(){
+    return y;  
+  }
+  
+  void setValeur(int Nv){
+    valeur = Nv;      
+  }
+  
+  int getValeur(){
+    return valeur;      
+  }
+}
+
 Item[] item = new Item[100];
 
 class Item{
@@ -143,6 +177,8 @@ int nb_item = 0;
 int angle_personnage = 0;
 
 int nb_balle = 0;
+
+int nb_hit_marker = 0;
 
 String message_info = "";
 
@@ -194,6 +230,8 @@ float angle = 0;
 //La variables est a 1 si la personne est entrain de tirer
 int tir_en_cours = 0;
 
+int pv = 100;
+
 void setup(){
   size(600,600); 
   
@@ -210,6 +248,10 @@ void setup(){
    
   for (int i = 0; i < 100; i++) {
     item[i] = new Item();
+  } 
+  
+  for (int i = 0; i < 10; i++) {
+    hitmarker[i] = new HitMarker();
   } 
   
   //on charge les images
@@ -296,10 +338,12 @@ void draw(){
     affiche_personnage();
     affiche_limite();
     afficheObjet();
+    afficheHitMarker();
     
     afficheMiniMap();
     
     afficheTchat();
+    afficheBarrePV();
    
     
   } 
@@ -328,6 +372,8 @@ void connect_serveur(){
           //On commence par récupérer la position de nous
           xPers = json.getInt("X");
           yPers = json.getInt("Y");
+          
+          pv = json.getInt("pv");
           
           JSONArray posX = json.getJSONArray("pX");
           JSONArray posY = json.getJSONArray("pY");
@@ -430,23 +476,26 @@ void affiche_personnage(){
   }  
   
   //On affiche ensuite notre personnage
-  //fill(255,0,0);
-  //ellipse(width/2, width/2,30,30);
-  
-  pushMatrix();
-  
-  translate(width/2,height/2);
-  rotate(PI * angle / 180);
-  image(pers,-35,-50,70,70);
-  
-  //Si la personne est entrain de tirer on affiche une petite animation de tir
-  if(tir_en_cours == 1){
-    if(random(0,3) < 1.5){
-      image(tir,25,-10);
+  //seulement si il est encore en vie
+  if(pv > 0){
+    //fill(255,0,0);
+    //ellipse(width/2, width/2,30,30);
+    
+    pushMatrix();
+    
+    translate(width/2,height/2);
+    rotate(PI * angle / 180);
+    image(pers,-35,-50,70,70);
+    
+    //Si la personne est entrain de tirer on affiche une petite animation de tir
+    if(tir_en_cours == 1){
+      if(random(0,3) < 1.5){
+        image(tir,25,-10);
+      }
     }
+    
+    popMatrix();
   }
-  
-  popMatrix();
 }
 
 
@@ -626,5 +675,52 @@ void mousePressed(){
 
 void mouseReleased(){
   tir_en_cours = 0;  
+  
+}
+
+void afficheHitMarker(){
+  //Les hitsmarkers servent à indiqué au joueur qu'il a touché son adversaire
+  for(int i = 0; i < nb_balle;i++){
+    for(int j = 0; j < nb_joueur;j++){
+      //On calcul la distance entre les balles et les personnages:
+      float distance = sqrt(abs(balle[i].getX() - joueur[j].getX())*abs(balle[i].getX() - joueur[j].getX())+abs(balle[i].getY() - joueur[j].getY())*abs(balle[i].getY() - joueur[j].getY()));
+      if(distance < 40){
+        if(nb_hit_marker < 9){
+          hitmarker[nb_hit_marker].setValeur(-10); 
+          hitmarker[nb_hit_marker].setX(balle[i].getX()-10);
+          hitmarker[nb_hit_marker].setY(balle[i].getY()-10); 
+          hitmarker[nb_hit_marker].tmp_aff = millis(); 
+          
+          nb_hit_marker++;
+        }
+      }
+    }    
+  }
+  
+  //maintenant ont les affiches
+  for(int i = 0; i < nb_hit_marker;i++){
+    fill(255,0,0);
+    
+    int x = width/2 - (xPers - hitmarker[i].x);
+    int y = height/2 - (yPers - hitmarker[i].y);
+    
+    textSize(15);
+    
+    text(hitmarker[i].getValeur(),x,y);
+    
+    if(millis() - hitmarker[i].tmp_aff > 500){
+      nb_hit_marker--;  
+    }
+  }
+  
+}
+
+void afficheBarrePV(){
+  fill(0);
+  rect(20,10,225,25);
+  fill(0,255,0);
+  float xBar = map(pv,0,100,0,221);
+  rect(22,12,xBar,21);
+  
   
 }

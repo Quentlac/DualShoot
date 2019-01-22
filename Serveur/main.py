@@ -22,6 +22,8 @@ class Joueur:
 	#cette variable permet de reguler le nombre de balle tire.
 	cadence_tir = 0
 
+	respawn = 0
+
 
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
@@ -91,7 +93,7 @@ class Balle:
 	y_dep = 0
 
 
-	dist = 15
+	dist = 25
 	direc = 0
 
 	id_joueur = 0
@@ -170,6 +172,9 @@ for loop in range(len(mapJson["arbreX"])):
 #on definis une fonction capable de detecter une eventuel colision entre deux elements.
 def detectColision(x, y, pers):
 	#Colision entre le joueur et les arbres
+	#-1 = colision avec un arbre
+	#0 = Aucune colision
+	#>0 = colision avec un pers(nombre = id perso)
 	
 	#on prend chaque arbre un par un
 	for loop2 in range(len(arbre)):
@@ -179,7 +184,7 @@ def detectColision(x, y, pers):
 		#les -35 permettent de specifier le centre de l'arbre pas l'angle
 		distance = sqrt(abs(x - arbre[loop2].getPosX()-35)*abs(x - arbre[loop2].getPosX()-35)+abs(y - arbre[loop2].getPosY()-35)*abs(y - arbre[loop2].getPosY()-35))
 		if(distance < 35):
-			return 1
+			return -1
 
 	#On calcule la colision entre les personnages
 	for loop2 in range(nb_joueur):
@@ -190,11 +195,13 @@ def detectColision(x, y, pers):
 				distance = sqrt(abs(x - joueur[loop2].getPosX())*abs(x - joueur[loop2].getPosX())+abs(y - joueur[loop2].getPosY())*abs(y - joueur[loop2].getPosY()))
 
 				if(distance < 30):
-					return 1	
+					return loop2+1	
 
 	#On calcule maintenant les collisions avec les limites de la map:
 	if(x >= 6000 or x < 0 or y >= 6000 or y < 0):
 		return 1
+
+	return 0
 	
 
 
@@ -233,6 +240,8 @@ while True:
 
 		message = message + "X:" + str(joueur[id_joueur].getPosX())+","
 		message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
+
+		message = message + "pv:" + str(joueur[id_joueur].getVie())+","
 
 		#la position de chaque joueur
 		message = message + "pX:[";
@@ -337,45 +346,48 @@ while True:
 
 		if(message_valide == 1):
 			id_client = json_msg['ID']
-
-			joueur[id_client].setAngle(json_msg['ang'])
-
-			#on cree une variable vitesse pour pouvoir changer plus rapidement
-			vitesse = 10
-
-
-			cmd = json_msg['cmd']
-
-			if(cmd.find("RIGHT") != -1):
-				if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) != 1):
-					joueur[id_client].moveToRight(vitesse)
-
-			if(cmd.find("LEFT") != -1):
-				if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) != 1):
-					joueur[id_client].moveToLeft(vitesse)
 			
-			if(cmd.find("UP") != -1):
-				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) != 1):
-					joueur[id_client].moveToUp(vitesse)
+			#On regarde que le joueur soit en vie pour se deplacer ou tirer
+			if(joueur[id_client].getVie() > 0):
 
-			if(cmd.find("DOWN") != -1):
-				if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) != 1):
-					joueur[id_client].moveToDown(vitesse)
+				joueur[id_client].setAngle(json_msg['ang'])
+
+				#on cree une variable vitesse pour pouvoir changer plus rapidement
+				vitesse = 10
+
+
+				cmd = json_msg['cmd']
+
+				if(cmd.find("RIGHT") != -1):
+					if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
+						joueur[id_client].moveToRight(vitesse)
+
+				if(cmd.find("LEFT") != -1):
+					if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) == 0):
+						joueur[id_client].moveToLeft(vitesse)
 			
-			#On regarde maintenant si je joueur veux tirer
-			tir = json_msg['tir']
-			if(tir == "1"):
-				joueur[id_client].setStatus(2)
+				if(cmd.find("UP") != -1):
+					if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) == 0):
+						joueur[id_client].moveToUp(vitesse)
 
-				#On cree une balle pour le tir
-				if(time.time() - joueur[id_client].getCadTir() > 0.3):
-					#on remet le 'compteur' a 0
-					joueur[id_client].setCadTir(time.time())
-					nouvelle_balle = Balle()
-					nouvelle_balle.init(id_client,json_msg['ang'],joueur[id_client].getPosX(),joueur[id_client].getPosY())
-					balle.append(nouvelle_balle)
-			else:
-				joueur[id_client].setStatus(0)
+				if(cmd.find("DOWN") != -1):
+					if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) == 0):
+						joueur[id_client].moveToDown(vitesse)
+			
+				#On regarde maintenant si je joueur veux tirer
+				tir = json_msg['tir']
+				if(tir == "1"):
+					joueur[id_client].setStatus(2)
+
+					#On cree une balle pour le tir
+					if(time.time() - joueur[id_client].getCadTir() > 0.3):
+						#on remet le 'compteur' a 0
+						joueur[id_client].setCadTir(time.time())
+						nouvelle_balle = Balle()
+						nouvelle_balle.init(id_client,json_msg['ang'],joueur[id_client].getPosX(),joueur[id_client].getPosY())
+						balle.append(nouvelle_balle)
+				else:
+					joueur[id_client].setStatus(0)
 	
 	#On fait bouger toutes les balles tirees
 	for loop in range(len(balle)):
@@ -383,8 +395,20 @@ while True:
 		if(loop < len(balle)):
 			balle[loop].move(10)
 			#On detect la colision avec les autres objets
-			if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == 1):
+			if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) != 0):
 				#La balle touche on va donc la supprimer
+				if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur())>0):
+					#Avec un joueur
+					#On applique les degats
+					#Le -1 sert a remmettre la bonne valeur(pour ne pas qu'elle soit a 0 lors du return de la fonction)
+					joueur_touche = detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur())-1
+					joueur[joueur_touche].supprVie(10)
+					if(joueur[joueur_touche].getVie() <= 0):
+						#Le joueurs est mort on envoi un petit msg sur le chat
+						message_tchat = str(balle[loop].getIdJoueur())+" a elimine "+str(joueur_touche)
+						#Ensuite on fait respawn le personnage
+						
+
 				del balle[loop]
 
 			
