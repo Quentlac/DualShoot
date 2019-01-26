@@ -1,4 +1,22 @@
-import processing.net.*;
+import processing.core.*; 
+import processing.data.*; 
+import processing.event.*; 
+import processing.opengl.*; 
+
+import processing.net.*; 
+
+import java.util.HashMap; 
+import java.util.ArrayList; 
+import java.io.File; 
+import java.io.BufferedReader; 
+import java.io.PrintWriter; 
+import java.io.InputStream; 
+import java.io.OutputStream; 
+import java.io.IOException; 
+
+public class client extends PApplet {
+
+
 
 Client c;
 
@@ -9,14 +27,13 @@ float angle_arme = 0;
 
 Joueur[] joueur = new Joueur[100];
 
-
 class Joueur{
   int x = 0;
   int y = 0;  
   
   int angle = 0;
   
-  String pseudo = "test";
+  String pseudo = "";
   
   int arme_en_main = 0;
   
@@ -24,52 +41,52 @@ class Joueur{
   //0=fixe 1=marche 2=tir 3=marche+tir
   int status = 0;
 
-  void setX(int Nx){
+  public void setX(int Nx){
     x = Nx;      
   }
   
-  void setY(int Ny){
+  public void setY(int Ny){
     y = Ny;      
   }
   
-  int getX(){
+  public int getX(){
     return x;  
   }
   
-  int getY(){
+  public int getY(){
     return y;  
   }
   
-  void setAngle(int Na){
+  public void setAngle(int Na){
     angle = Na;  
     
   }
   
-  int getAngle(){
+  public int getAngle(){
     return angle;  
   }
   
-  void setStatus(int Ns){
+  public void setStatus(int Ns){
     status = Ns;   
   }
   
-  int getStatus(){
+  public int getStatus(){
     return status;  
   }
   
-  void setPseudo(String NewPseudo){
+  public void setPseudo(String NewPseudo){
     pseudo = NewPseudo;  
   }
-  String getPseudo(){
+  public String getPseudo(){
     return pseudo;  
   }
   
-  void setArme(int Na){
+  public void setArme(int Na){
     arme_en_main = Na;  
     
   }
   
-  int getArme(){
+  public int getArme(){
     return arme_en_main;  
   }
 }
@@ -82,19 +99,19 @@ class Balle{
   int x = 0;
   int y = 0;  
   
-  void setX(int Nx){
+  public void setX(int Nx){
     x = Nx;      
   }
   
-  void setY(int Ny){
+  public void setY(int Ny){
     y = Ny;      
   }
   
-  int getX(){
+  public int getX(){
     return x;  
   }
   
-  int getY(){
+  public int getY(){
     return y;  
   }
 }
@@ -105,19 +122,19 @@ class Base{
   
   int vie = 1000;
   
-  void setX(int Nx){
+  public void setX(int Nx){
     x = Nx;      
   }
   
-  void setY(int Ny){
+  public void setY(int Ny){
     y = Ny;      
   }
   
-  int getX(){
+  public int getX(){
     return x;  
   }
   
-  int getY(){
+  public int getY(){
     return y;  
   }
 }
@@ -134,27 +151,27 @@ class HitMarker{
   int valeur = 0;
   long tmp_aff = 0;
   
-  void setX(int Nx){
+  public void setX(int Nx){
     x = Nx;      
   }
   
-  void setY(int Ny){
+  public void setY(int Ny){
     y = Ny;      
   }
   
-  int getX(){
+  public int getX(){
     return x;  
   }
   
-  int getY(){
+  public int getY(){
     return y;  
   }
   
-  void setValeur(int Nv){
+  public void setValeur(int Nv){
     valeur = Nv;      
   }
   
-  int getValeur(){
+  public int getValeur(){
     return valeur;      
   }
 }
@@ -167,27 +184,27 @@ class Item{
   
   int idArme = 0;
   
-  void setX(int Nx){
+  public void setX(int Nx){
     x = Nx;      
   }
   
-  void setY(int Ny){
+  public void setY(int Ny){
     y = Ny;      
   }
   
-  void setIdArme(int id){
+  public void setIdArme(int id){
     idArme = id;  
   }
   
-  int getX(){
+  public int getX(){
     return x;  
   }
   
-  int getY(){
+  public int getY(){
     return y;  
   } 
   
-  int getIdArme(){
+  public int getIdArme(){
     return idArme;  
   }
 }
@@ -235,10 +252,6 @@ PImage beton;
 PImage pers;
 PImage tir;
 
-PImage imgBaseA;
-PImage imgBaseB;
-
-
 Arbre[] arbre = new Arbre[300];
 
 class Arbre{
@@ -263,16 +276,10 @@ int tir_en_cours = 0;
 
 int pv = 100;
 
-int pseudo_OK = 0;
-
-//cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
-int antiRepet = 0;
-
-void setup(){
-  size(600,600); 
-  frameRate(60);
+public void setup(){
+   
   
-  c = new Client(this, "localhost", 222);
+  c = new Client(this, "quentin-fr.ddns.net", 222);
 
   
   for (int i = 0; i < 100; i++) {
@@ -301,9 +308,6 @@ void setup(){
   
   pers = loadImage("Images/pers.gif");
   tir = loadImage("Images/tir.png");
-  
-  imgBaseA = loadImage("Images/baseA.png");
-  imgBaseB = loadImage("Images/baseB.png");
   
   PImage arbreimgtmp = loadImage("Images/trees.png");
   arbreimg = arbreimgtmp.get(0,0,256,256);
@@ -359,15 +363,15 @@ void setup(){
     arbre[i].x = arbreX.getInt(i);
     arbre[i].y = arbreY.getInt(i); 
   }
-  
+
+
 }
 
 
-void draw(){
+public void draw(){
   background(255);
   
   connect_serveur();
-  
   
   //on test si l'id_client est valide pour effectuer les actions suivante
   if(id_client != -1){
@@ -387,16 +391,12 @@ void draw(){
     afficheTchat();
     afficheBarrePV();
    
-  } 
-  if(pseudo_OK == 0){
-    //on règle le pseudo
-    demandePseudo();
     
-  }
+  } 
 }
 
 
-void connect_serveur(){
+public void connect_serveur(){
   if (c.available()>0){
     delay(2);
     //on calcul le ping
@@ -406,8 +406,8 @@ void connect_serveur(){
     data = c.readStringUntil('}');  
 
     if(data != null){
-      println(data);
-      println("############################");
+      //println(data);
+      //println("############################");
       JSONObject json = parseJSONObject(data);
       if(json != null){ 
         //on récupère d'abord l'ID si on l'a pas encore
@@ -425,7 +425,6 @@ void connect_serveur(){
           JSONArray posY = json.getJSONArray("pY");
           JSONArray angleTab = json.getJSONArray("pAngle");
           JSONArray statusTab = json.getJSONArray("pStatus");
-          JSONArray pseudoTab = json.getJSONArray("pPseudo");
           
           JSONArray balleX = json.getJSONArray("bX");
           JSONArray balleY = json.getJSONArray("bY");
@@ -439,7 +438,6 @@ void connect_serveur(){
             joueur[i].setY(posY.getInt(i));
             joueur[i].setAngle(angleTab.getInt(i));
             joueur[i].setStatus(statusTab.getInt(i));
-            joueur[i].setPseudo(pseudoTab.getString(i));
           }
           
           //la taille du tableau correspond au nombre de balle
@@ -476,13 +474,11 @@ void connect_serveur(){
     } 
     
     //Une fois que le client nous a envoyé un message on lui repond -> permet d'être le plus fluide possible.
-    if(pseudo_OK == 1){
-      test_commande();
-    }
+    test_commande();
   }  
 }
 
-void test_commande(){
+public void test_commande(){
   if(key_RIGHT + key_LEFT + key_UP + key_DOWN + key_E > 0){
     String message_cmd = "";
     
@@ -502,15 +498,15 @@ void test_commande(){
       message_cmd = message_cmd + "DOWN;";
     }
     if(key_E == 1)message_cmd = message_cmd + "TAKE;";
-    c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
+    c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"ang\": "+PApplet.parseInt(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
   }
   else{
-    c.write("{\"ID\": "+id_client+" , \"cmd\": \"NULL\", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
+    c.write("{\"ID\": "+id_client+" , \"cmd\": \"NULL\", \"ang\": "+PApplet.parseInt(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
   }
   
 }
 
-void affiche_personnage(){  
+public void affiche_personnage(){  
   //on affiche tous les personnages (sauf le notre)
   
   for(int i = 0; i < nb_joueur;i++){
@@ -525,16 +521,12 @@ void affiche_personnage(){
     
     //Si la personne est entrain de tirer on affiche une petite animation de tir
     if(joueur[i].getStatus() == 2 || joueur[i].getStatus() == 3){
-      if(random(0,3) < 1.5){
+      if(random(0,3) < 1.5f){
         image(tir,25,-10);
       }
     }
     
     popMatrix();
-    
-    //on affiche le pseudo
-    fill(255,0,0);
-    text(joueur[i].getPseudo(),x-50,y-25);
     
   }  
   
@@ -552,18 +544,12 @@ void affiche_personnage(){
     
     //Si la personne est entrain de tirer on affiche une petite animation de tir
     if(tir_en_cours == 1){
-      if(random(0,3) < 1.5){
+      if(random(0,3) < 1.5f){
         image(tir,25,-10);
       }
     }
     
     popMatrix();
-    //On affiche le pseudo
-    //mais uniquement si on est pas entrain de le taper(bug d'affichage sinon)
-    if(pseudo_OK == 1){
-      fill(255,0,0);
-      text(pseudo,300-30,300-35);
-    }
   }
 }
 
@@ -571,7 +557,7 @@ void affiche_personnage(){
 
 
 
-void keyPressed(){
+public void keyPressed(){
   if(keyCode == RIGHT){
     key_RIGHT = 1;  
   }
@@ -589,7 +575,7 @@ void keyPressed(){
   }
 }
 
-void keyReleased(){
+public void keyReleased(){
   if(keyCode == RIGHT){
     key_RIGHT = 0;  
   }
@@ -607,13 +593,13 @@ void keyReleased(){
   }
 }
 
-void affichage_map(){
-  int xDep = int(xPers/60)*60 - xPers;
-  int yDep = int(yPers/60)*60 - yPers;
+public void affichage_map(){
+  int xDep = PApplet.parseInt(xPers/60)*60 - xPers;
+  int yDep = PApplet.parseInt(yPers/60)*60 - yPers;
   
   //on calcul ou commencer dans le tableau map
-  int xTab = int(xPers/60)-5;
-  int yTab = int(yPers/60)-5;
+  int xTab = PApplet.parseInt(xPers/60)-5;
+  int yTab = PApplet.parseInt(yPers/60)-5;
   
   
   stroke(200);
@@ -639,7 +625,7 @@ void affichage_map(){
   
 }
 
-void affiche_limite(){
+public void affiche_limite(){
   textSize(25);
   fill(255,0,0);
   text(xPers+","+yPers,100,100);
@@ -652,7 +638,7 @@ void affiche_limite(){
   strokeWeight(1);
 }
 
-void afficheMiniMap(){
+public void afficheMiniMap(){
   fill(255);
   
   rect(489,489,101,101);
@@ -683,7 +669,7 @@ void afficheMiniMap(){
   
 }
 
-void afficheObjet(){
+public void afficheObjet(){
   for(int i = 0; i < nb_arbre;i++){
     int x = width/2 - (xPers - arbre[i].x); 
     int y = height/2 - (yPers - arbre[i].y); 
@@ -694,7 +680,7 @@ void afficheObjet(){
   
 }
 
-void afficheTchat(){
+public void afficheTchat(){
   textSize(10);
   
   fill(255,255,255,100);
@@ -709,7 +695,7 @@ void afficheTchat(){
   
 }
 
-void setAnglePers(){
+public void setAnglePers(){
   float x = mouseX-(width/2);
   float y = mouseY-(height/2);
   
@@ -728,7 +714,7 @@ void setAnglePers(){
   
 }
 
-void afficheBalle(){
+public void afficheBalle(){
   //Ici on affiche toutes les balles
   for(int i = 0; i < nb_balle;i++){
     int x = width/2 - (xPers - balle[i].getX()); 
@@ -743,17 +729,17 @@ void afficheBalle(){
   
 }
 
-void mousePressed(){
+public void mousePressed(){
   tir_en_cours = 1;  
   
 }
 
-void mouseReleased(){
+public void mouseReleased(){
   tir_en_cours = 0;  
   
 }
 
-void afficheHitMarker(){
+public void afficheHitMarker(){
   //Les hitsmarkers servent à indiqué au joueur qu'il a touché son adversaire
   for(int i = 0; i < nb_balle;i++){
     for(int j = 0; j < nb_joueur;j++){
@@ -790,7 +776,7 @@ void afficheHitMarker(){
   
 }
 
-void afficheBarrePV(){
+public void afficheBarrePV(){
   fill(0);
   rect(20,10,225,25);
   fill(0,255,0);
@@ -801,62 +787,44 @@ void afficheBarrePV(){
   fill(0);
   stroke(255,0,0);
   rect(489,440,100,15);
-  xBar = map(baseA.vie,0,5000,0,96);
+  xBar = map(baseA.vie,0,1000,0,96);
   fill(255,0,0);
   rect(491,442,xBar,11);
   
   fill(0);
   stroke(0,100,255);
   rect(489,465,100,15);
-  xBar = map(baseB.vie,0,5000,0,96);
+  xBar = map(baseB.vie,0,1000,0,96);
   fill(0,100,255);
   rect(491,467,xBar,11);
   
 }
 
-void afficheBase(){
+public void afficheBase(){
  int x = width/2 - (xPers - baseA.getX());
  int y = height/2 - (yPers - baseA.getY()); 
   
  if(baseA.vie > 0){  
-   image(imgBaseA,x,y);
+   fill(255,0,0);
+   rect(x,y,300,200);
  }
  
  x = width/2 - (xPers - baseB.getX());
  y = height/2 - (yPers - baseB.getY()); 
  
  if(baseB.vie > 0){  
-   image(imgBaseB,x,y);;
+   fill(0,100,255);
+   rect(x,y,300,200);
  }
   
 }
-
-
-void demandePseudo(){
-  fill(0);
-  textSize(20);
-  text("Comment souhaite tu t'appeler?",50,100);
-  
-  
-  
-  if(keyPressed == true && antiRepet == 0){
-    if(key == ' '){
-      pseudo_OK = 1;  
+  public void settings() {  size(600,600); }
+  static public void main(String[] passedArgs) {
+    String[] appletArgs = new String[] { "client" };
+    if (passedArgs != null) {
+      PApplet.main(concat(appletArgs, passedArgs));
+    } else {
+      PApplet.main(appletArgs);
     }
-    antiRepet = 1;
-    pseudo = pseudo + key;
-    
   }
-  if(keyPressed == false && antiRepet == 1){
-    antiRepet = 0;  
-  }
-  
-  fill(200);
-  rect((width-250)/2,(height-70)/2,250,70);
-  
-  fill(0);
-  rect(pseudo.length()*28+(width-250)/2,(height-70)/2+3,3,64);
-  textSize(50);
-  text(pseudo,(width-250)/2+5,(height-70)/2+50);
-  
 }

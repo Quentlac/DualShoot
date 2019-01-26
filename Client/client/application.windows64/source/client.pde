@@ -9,14 +9,13 @@ float angle_arme = 0;
 
 Joueur[] joueur = new Joueur[100];
 
-
 class Joueur{
   int x = 0;
   int y = 0;  
   
   int angle = 0;
   
-  String pseudo = "test";
+  String pseudo = "";
   
   int arme_en_main = 0;
   
@@ -235,10 +234,6 @@ PImage beton;
 PImage pers;
 PImage tir;
 
-PImage imgBaseA;
-PImage imgBaseB;
-
-
 Arbre[] arbre = new Arbre[300];
 
 class Arbre{
@@ -263,16 +258,10 @@ int tir_en_cours = 0;
 
 int pv = 100;
 
-int pseudo_OK = 0;
-
-//cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
-int antiRepet = 0;
-
 void setup(){
   size(600,600); 
-  frameRate(60);
   
-  c = new Client(this, "localhost", 222);
+  c = new Client(this, "quentin-fr.ddns.net", 222);
 
   
   for (int i = 0; i < 100; i++) {
@@ -301,9 +290,6 @@ void setup(){
   
   pers = loadImage("Images/pers.gif");
   tir = loadImage("Images/tir.png");
-  
-  imgBaseA = loadImage("Images/baseA.png");
-  imgBaseB = loadImage("Images/baseB.png");
   
   PImage arbreimgtmp = loadImage("Images/trees.png");
   arbreimg = arbreimgtmp.get(0,0,256,256);
@@ -359,7 +345,8 @@ void setup(){
     arbre[i].x = arbreX.getInt(i);
     arbre[i].y = arbreY.getInt(i); 
   }
-  
+
+
 }
 
 
@@ -367,7 +354,6 @@ void draw(){
   background(255);
   
   connect_serveur();
-  
   
   //on test si l'id_client est valide pour effectuer les actions suivante
   if(id_client != -1){
@@ -387,12 +373,8 @@ void draw(){
     afficheTchat();
     afficheBarrePV();
    
-  } 
-  if(pseudo_OK == 0){
-    //on règle le pseudo
-    demandePseudo();
     
-  }
+  } 
 }
 
 
@@ -406,8 +388,8 @@ void connect_serveur(){
     data = c.readStringUntil('}');  
 
     if(data != null){
-      println(data);
-      println("############################");
+      //println(data);
+      //println("############################");
       JSONObject json = parseJSONObject(data);
       if(json != null){ 
         //on récupère d'abord l'ID si on l'a pas encore
@@ -425,7 +407,6 @@ void connect_serveur(){
           JSONArray posY = json.getJSONArray("pY");
           JSONArray angleTab = json.getJSONArray("pAngle");
           JSONArray statusTab = json.getJSONArray("pStatus");
-          JSONArray pseudoTab = json.getJSONArray("pPseudo");
           
           JSONArray balleX = json.getJSONArray("bX");
           JSONArray balleY = json.getJSONArray("bY");
@@ -439,7 +420,6 @@ void connect_serveur(){
             joueur[i].setY(posY.getInt(i));
             joueur[i].setAngle(angleTab.getInt(i));
             joueur[i].setStatus(statusTab.getInt(i));
-            joueur[i].setPseudo(pseudoTab.getString(i));
           }
           
           //la taille du tableau correspond au nombre de balle
@@ -476,9 +456,7 @@ void connect_serveur(){
     } 
     
     //Une fois que le client nous a envoyé un message on lui repond -> permet d'être le plus fluide possible.
-    if(pseudo_OK == 1){
-      test_commande();
-    }
+    test_commande();
   }  
 }
 
@@ -532,10 +510,6 @@ void affiche_personnage(){
     
     popMatrix();
     
-    //on affiche le pseudo
-    fill(255,0,0);
-    text(joueur[i].getPseudo(),x-50,y-25);
-    
   }  
   
   //On affiche ensuite notre personnage
@@ -558,12 +532,6 @@ void affiche_personnage(){
     }
     
     popMatrix();
-    //On affiche le pseudo
-    //mais uniquement si on est pas entrain de le taper(bug d'affichage sinon)
-    if(pseudo_OK == 1){
-      fill(255,0,0);
-      text(pseudo,300-30,300-35);
-    }
   }
 }
 
@@ -801,14 +769,14 @@ void afficheBarrePV(){
   fill(0);
   stroke(255,0,0);
   rect(489,440,100,15);
-  xBar = map(baseA.vie,0,5000,0,96);
+  xBar = map(baseA.vie,0,1000,0,96);
   fill(255,0,0);
   rect(491,442,xBar,11);
   
   fill(0);
   stroke(0,100,255);
   rect(489,465,100,15);
-  xBar = map(baseB.vie,0,5000,0,96);
+  xBar = map(baseB.vie,0,1000,0,96);
   fill(0,100,255);
   rect(491,467,xBar,11);
   
@@ -819,44 +787,16 @@ void afficheBase(){
  int y = height/2 - (yPers - baseA.getY()); 
   
  if(baseA.vie > 0){  
-   image(imgBaseA,x,y);
+   fill(255,0,0);
+   rect(x,y,300,200);
  }
  
  x = width/2 - (xPers - baseB.getX());
  y = height/2 - (yPers - baseB.getY()); 
  
  if(baseB.vie > 0){  
-   image(imgBaseB,x,y);;
+   fill(0,100,255);
+   rect(x,y,300,200);
  }
-  
-}
-
-
-void demandePseudo(){
-  fill(0);
-  textSize(20);
-  text("Comment souhaite tu t'appeler?",50,100);
-  
-  
-  
-  if(keyPressed == true && antiRepet == 0){
-    if(key == ' '){
-      pseudo_OK = 1;  
-    }
-    antiRepet = 1;
-    pseudo = pseudo + key;
-    
-  }
-  if(keyPressed == false && antiRepet == 1){
-    antiRepet = 0;  
-  }
-  
-  fill(200);
-  rect((width-250)/2,(height-70)/2,250,70);
-  
-  fill(0);
-  rect(pseudo.length()*28+(width-250)/2,(height-70)/2+3,3,64);
-  textSize(50);
-  text(pseudo,(width-250)/2+5,(height-70)/2+50);
   
 }

@@ -4,6 +4,7 @@ import time
 import os
 import json
 from math import *
+from random import randint
 
 class Joueur:
 	x = 0
@@ -23,6 +24,8 @@ class Joueur:
 	cadence_tir = 0
 
 	respawn = 0
+
+	pseudo = ""
 
 
 	def supprVie(self,valeur):
@@ -70,6 +73,12 @@ class Joueur:
 
 	def getCadTir(self):
 		return self.cadence_tir
+	
+	def setPseudo(self, nP):
+		self.pseudo = nP
+
+	def getPseudo(self):
+		return self.pseudo
 
 class Arbre:
 	x = 0
@@ -93,7 +102,7 @@ class Balle:
 	y_dep = 0
 
 
-	dist = 25
+	dist = 40
 	direc = 0
 
 	id_joueur = 0
@@ -122,6 +131,32 @@ class Balle:
 
 	def getIdJoueur(self):
 		return self.id_joueur
+
+class Base:
+	x = 0
+	y = 0
+
+	vie = 1000
+
+	nbJ = 0
+
+	def setPosition(self,setX,setY):
+		self.x = setX
+		self.y = setY
+
+	def getPosX(self):
+		return self.x
+
+	def getPosY(self):
+		return self.y
+
+	def supprVie(self,valeur):
+		self.vie = self.vie - valeur
+
+	def getVie(self):
+		return self.vie
+
+	
 
 
 #Initialisation du Serveur
@@ -173,6 +208,9 @@ for loop in range(len(mapJson["arbreX"])):
 def detectColision(x, y, pers):
 	#Colision entre le joueur et les arbres
 	#-1 = colision avec un arbre
+	#-2 = bord de map
+	#-3 = base A
+	#-4 = base B
 	#0 = Aucune colision
 	#>0 = colision avec un pers(nombre = id perso)
 	
@@ -186,7 +224,7 @@ def detectColision(x, y, pers):
 		if(distance < 35):
 			return -1
 
-	#On calcule la colision entre les personnages
+	#On calcule la colision avec les personnages
 	for loop2 in range(nb_joueur):
 		#On ne vas pas detecter une colision avec le joueur lui meme!!
 		if(pers != loop2):
@@ -199,14 +237,39 @@ def detectColision(x, y, pers):
 
 	#On calcule maintenant les collisions avec les limites de la map:
 	if(x >= 6000 or x < 0 or y >= 6000 or y < 0):
-		return 1
+		return -2
+
+	#Colision avec les bases des equipes
+	if(x > baseA.getPosX() and x < baseA.getPosX() + 300 and y > baseA.getPosY() and y < baseA.getPosY() + 200):
+		return -3
+	if(x > baseB.getPosX() and x < baseB.getPosX() + 300 and y > baseB.getPosY() and y < baseB.getPosY() + 200):
+		return -4
 
 	return 0
+
+
+baseA = Base()
+baseB = Base()
+
+def lancePartie():
+	#On fait spawn les bases des deux equipes
+	baseA.setPosition(randint(200,5800),randint(200,5800))
+	baseA.vie = 5000
+
+	baseB.setPosition(randint(200,5800),randint(200,5800))
+	baseB.vie = 5000
+
+	#On elimine tous les joueurs
+	for loop in range(nb_joueur):
+		joueur[loop].supprVie(100)
+	
+	
 	
 
 
 message_tchat = "-"
 
+lancePartie()
 
 while True:
 	#on test si un nouveau joueur veux se connecter
@@ -225,8 +288,30 @@ while True:
 		#on cree le joueur
 		
 		player = Joueur()
+		
+		#On definit son equipe en fonction du nombre de joueur dans chaque equipe
+		if(baseA.nbJ < baseB.nbJ):
+			player.equipe = 1
+			baseA.nbJ += 1
+		else:
+			player.equipe = 2
+			baseB.nbJ += 1
+		
+		#On le fait spawn:
+		
+		if(player.equipe == 1):
+			player.setPosition(baseA.getPosX()+randint(-150,150),baseA.getPosY()+randint(-150,150))
+		else:
+			player.setPosition(baseB.getPosX()+randint(-150,150),baseB.getPosY()+randint(-150,150))	
 
-		player.setPosition(0,0)
+		while(detectColision(player.getPosX(),player.getPosY(),nb_joueur) != 0):
+			if(player.equipe == 1):
+				player.setPosition(baseA.getPosX()+randint(-150,150),baseA.getPosY()+randint(-150,150))
+			else:
+				player.setPosition(baseB.getPosX()+randint(-150,150),baseB.getPosY()+randint(-150,150))
+
+		#On met un pseudo temporaire en attendant que il nous le donne
+		player.pseudo = "-"
 
 		joueur.append(player)
 
@@ -281,6 +366,15 @@ while True:
 
 		message = message + "],"
 
+		#On envoi le pseudo des joueurs:
+		message = message + "pPseudo:[";
+		for loop in range(nb_joueur):
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				if(id_joueur != loop):				
+					message = message + "\'" + str(joueur[loop].getPseudo()) + "\',";
+
+		message = message + "],"
+
 		#On envoi maintenant la position des balles
 		message = message + "bX:[";
 		for loop in range(len(balle)):
@@ -296,6 +390,16 @@ while True:
 				message = message + str(balle[loop].getPosY()) + ",";
 
 		message = message + "],"
+
+		#On envoi la positon des bases des equipes et les pv:
+		message = message + "baseAX: " + str(baseA.getPosX()) + ","
+		message = message + "baseAY: " + str(baseA.getPosY()) + ","
+		message = message + "baseAPv: " + str(baseA.getVie()) + ","
+
+		message = message + "baseBX: " + str(baseB.getPosX()) + ","
+		message = message + "baseBY: " + str(baseB.getPosY()) + ","
+		message = message + "baseBPv: " + str(baseB.getVie()) + ","
+		
 
 		message = message + "tchat: \""
 
@@ -320,6 +424,12 @@ while True:
 			message_tchat = "Une pers est partie! ("+str(id_joueur)+")"
 
 			liste_client[id_joueur] = 0
+
+			#On supprime le joueur de la base associe
+			if(joueur[id_joueur].equipe == 1):
+				baseA.nbJ -= 1
+			else:
+				baseB.nbJ -= 1	
 			joueur[id_joueur].supprVie(100)
 
 		id_joueur += 1
@@ -346,11 +456,14 @@ while True:
 
 		if(message_valide == 1):
 			id_client = json_msg['ID']
-			
+
 			#On regarde que le joueur soit en vie pour se deplacer ou tirer
 			if(joueur[id_client].getVie() > 0):
 
 				joueur[id_client].setAngle(json_msg['ang'])
+
+				#on recupere le pseudo
+				joueur[id_client].setPseudo(json_msg['pseudo'])
 
 				#on cree une variable vitesse pour pouvoir changer plus rapidement
 				vitesse = 10
@@ -393,7 +506,7 @@ while True:
 	for loop in range(len(balle)):
 		#La condition si dessous permet d'eviter le bug(IndexOutOfRange) dans le cas ou l'on supprime une balle
 		if(loop < len(balle)):
-			balle[loop].move(10)
+			balle[loop].move(15)
 			#On detect la colision avec les autres objets
 			if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) != 0):
 				#La balle touche on va donc la supprimer
@@ -407,10 +520,43 @@ while True:
 						#Le joueurs est mort on envoi un petit msg sur le chat
 						message_tchat = str(balle[loop].getIdJoueur())+" a elimine "+str(joueur_touche)
 						#Ensuite on fait respawn le personnage
-						
+						joueur[joueur_touche].respawn = time.time()
+				if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == -3):	
+					#Colision avec la baseA
+					#on verifie que la personne ne tire pas sur sa base
+					if(joueur[balle[loop].getIdJoueur()].equipe == 2):
+						baseA.supprVie(10)
+
+				if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == -4):	
+					#Colision avec la baseB
+					if(joueur[balle[loop].getIdJoueur()].equipe == 1):					
+						baseB.supprVie(10)
 
 				del balle[loop]
 
+	#On fait respawn tous les joueurs en attente de respawn
+	for loop in range(nb_joueur):
+		if(joueur[loop].respawn != 0):
+			if(time.time() - joueur[loop].respawn > 5):
+				joueur[loop].respawn = 0
+				if(joueur[loop].equipe == 1):
+					joueur[loop].setPosition(baseA.getPosX()+randint(-150,150),baseA.getPosY()+randint(-150,150))
+				else:
+					joueur[loop].setPosition(baseB.getPosX()+randint(-150,150),baseB.getPosY()+randint(-150,150))
+				
+				#La boucle while sert a eviter que le joueurs spawn sur un objet avec une collision
+				while(detectColision(player.getPosX(),joueur[loop].getPosY(),loop) != 0):
+					if(joueur[loop].equipe == 1):
+						joueur[loop].setPosition(baseA.getPosX()+randint(-150,150),baseA.getPosY()+randint(-150,150))
+					else:
+						joueur[loop].setPosition(baseB.getPosX()+randint(-150,150),baseB.getPosY()+randint(-150,150))
+				joueur[loop].vie = 100
+	
+	if(baseA.vie <= 0 or baseB.vie <= 0):
+		#La partie est fini et on recommence
+		lancePartie()
+						
+	
 			
 
 			
