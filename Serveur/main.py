@@ -27,7 +27,6 @@ class Joueur:
 
 	pseudo = ""
 
-
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
 
@@ -326,7 +325,10 @@ while True:
 		message = message + "X:" + str(joueur[id_joueur].getPosX())+","
 		message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
 
+
 		message = message + "pv:" + str(joueur[id_joueur].getVie())+","
+
+		message = message + "equipe:" + str(joueur[id_joueur].equipe)+","
 
 		#la position de chaque joueur
 		message = message + "pX:[";
@@ -375,6 +377,24 @@ while True:
 
 		message = message + "],"
 
+		#On envoi les pv des joueurs:
+		message = message + "pVie:[";
+		for loop in range(nb_joueur):
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].getVie()) + ",";
+
+		message = message + "],"
+
+		#On envoi les equipes des joueurs:
+		message = message + "pEquipe:[";
+		for loop in range(nb_joueur):
+			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+				if(id_joueur != loop):				
+					message = message + str(joueur[loop].equipe) + ",";
+
+		message = message + "],"
+
 		#On envoi maintenant la position des balles
 		message = message + "bX:[";
 		for loop in range(len(balle)):
@@ -411,7 +431,8 @@ while True:
 			#le - signifie rien pour le client
 			message = message + "-"	
 
-		message = message + "\""	
+		message = message + "\","
+
 
 		message = message + "}"
 
@@ -545,7 +566,7 @@ while True:
 					joueur[loop].setPosition(baseB.getPosX()+randint(-150,150),baseB.getPosY()+randint(-150,150))
 				
 				#La boucle while sert a eviter que le joueurs spawn sur un objet avec une collision
-				while(detectColision(player.getPosX(),joueur[loop].getPosY(),loop) != 0):
+				while(detectColision(joueur[loop].getPosX(),joueur[loop].getPosY(),loop) != 0):
 					if(joueur[loop].equipe == 1):
 						joueur[loop].setPosition(baseA.getPosX()+randint(-150,150),baseA.getPosY()+randint(-150,150))
 					else:
@@ -558,10 +579,8 @@ while True:
 						
 	
 			
-
+	
 			
 			
 
-	
-	
 	

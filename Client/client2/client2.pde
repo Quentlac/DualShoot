@@ -20,9 +20,13 @@ class Joueur{
   
   int arme_en_main = 0;
   
+  int vie = 0;
+  
   //Cette variable permet de dire au client si le joueur marche ou tir afin d'adapter les animations
   //0=fixe 1=marche 2=tir 3=marche+tir
   int status = 0;
+  
+  int equipe = 1;
 
   void setX(int Nx){
     x = Nx;      
@@ -72,6 +76,25 @@ class Joueur{
   int getArme(){
     return arme_en_main;  
   }
+  
+  void setVie(int Nv){
+    vie = Nv;  
+    
+  }
+  
+  int getVie(){
+    return vie;  
+  }
+  
+  void setEquipe(int Ne){
+    equipe = Ne;  
+    
+  }
+  
+  int getEquipe(){
+    return equipe;  
+  }
+  
 }
 
 int pv_joueur = 100;
@@ -231,6 +254,7 @@ PImage eau;
 PImage route;
 PImage chemin;
 PImage beton;
+PImage lave;
 
 PImage pers;
 PImage tir;
@@ -262,11 +286,13 @@ float angle = 0;
 int tir_en_cours = 0;
 
 int pv = 100;
+int equipe = 1;
 
 int pseudo_OK = 0;
 
 //cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
 int antiRepet = 0;
+
 
 void setup(){
   size(600,600); 
@@ -298,6 +324,7 @@ void setup(){
   route = loadImage("Images/route.jpg");
   chemin = loadImage("Images/chemin.jpg");
   beton = loadImage("Images/beton.jpg");
+  lave = loadImage("Images/lave.png");
   
   pers = loadImage("Images/pers.gif");
   tir = loadImage("Images/tir.png");
@@ -376,16 +403,28 @@ void draw(){
 
     
     afficheBalle();
-    affiche_personnage();
+    
+    //on affiche pas le personnage si le pseudo n'est pas affiché, pour éviter qq bug d'affichage
+    if(pseudo_OK == 1){
+      affiche_personnage();
+    }
+    
     affiche_limite();
     afficheObjet();
     afficheBase();
     afficheHitMarker();
     
+    infoCarte();
+    
+    affichePvBase();
     afficheMiniMap();
     
     afficheTchat();
-    afficheBarrePV();
+    
+    //coordone(debug)
+    textSize(25);
+    fill(255,0,0);
+    text(xPers+","+yPers,100,100);
    
   } 
   if(pseudo_OK == 0){
@@ -420,12 +459,16 @@ void connect_serveur(){
           yPers = json.getInt("Y");
           
           pv = json.getInt("pv");
+          equipe = json.getInt("equipe");
+          
           
           JSONArray posX = json.getJSONArray("pX");
           JSONArray posY = json.getJSONArray("pY");
           JSONArray angleTab = json.getJSONArray("pAngle");
           JSONArray statusTab = json.getJSONArray("pStatus");
           JSONArray pseudoTab = json.getJSONArray("pPseudo");
+          JSONArray vieTab = json.getJSONArray("pVie");
+          JSONArray equipeTab = json.getJSONArray("pEquipe");
           
           JSONArray balleX = json.getJSONArray("bX");
           JSONArray balleY = json.getJSONArray("bY");
@@ -440,6 +483,8 @@ void connect_serveur(){
             joueur[i].setAngle(angleTab.getInt(i));
             joueur[i].setStatus(statusTab.getInt(i));
             joueur[i].setPseudo(pseudoTab.getString(i));
+            joueur[i].setVie(vieTab.getInt(i));
+            joueur[i].setEquipe(equipeTab.getInt(i));
           }
           
           //la taille du tableau correspond au nombre de balle
@@ -532,9 +577,6 @@ void affiche_personnage(){
     
     popMatrix();
     
-    //on affiche le pseudo
-    fill(255,0,0);
-    text(joueur[i].getPseudo(),x-50,y-25);
     
   }  
   
@@ -558,12 +600,7 @@ void affiche_personnage(){
     }
     
     popMatrix();
-    //On affiche le pseudo
-    //mais uniquement si on est pas entrain de le taper(bug d'affichage sinon)
-    if(pseudo_OK == 1){
-      fill(255,0,0);
-      text(pseudo,300-30,300-35);
-    }
+    
   }
 }
 
@@ -621,7 +658,7 @@ void affichage_map(){
   for(int y = 0; y < 11;y++){
     for(int x = 0; x < 11;x++){
       if((y+yTab) >= 0 && (x+xTab) >= 0 && (x+xTab) < 100 && (y+yTab) < 100){
-        if(map[y+yTab][x+xTab] == 0)fill(255);
+        if(map[y+yTab][x+xTab] == 0)fill(255);;
         if(map[y+yTab][x+xTab] == 1)image(herbe,x*60+xDep,y*60+yDep,60,60);
         if(map[y+yTab][x+xTab] == 2)image(sable,x*60+xDep,y*60+yDep,60,60);
         if(map[y+yTab][x+xTab] == 3)image(eau,x*60+xDep,y*60+yDep,60,60);
@@ -629,6 +666,7 @@ void affichage_map(){
         if(map[y+yTab][x+xTab] == 5)image(chemin,x*60+xDep,y*60+yDep,60,60);
         if(map[y+yTab][x+xTab] == 6)image(beton,x*60+xDep,y*60+yDep,60,60);  
       }
+      else image(lave,x*60+xDep,y*60+yDep,60,60);
     }
   }
   
@@ -640,10 +678,7 @@ void affichage_map(){
 }
 
 void affiche_limite(){
-  textSize(25);
-  fill(255,0,0);
-  text(xPers+","+yPers,100,100);
-  
+   
   strokeWeight(5);
   line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 0),height/2 - (yPers - 6000));
   line(width/2 - (xPers - 0),height/2 - (yPers - 0),width/2 - (xPers - 6000),height/2 - (yPers - 0));
@@ -790,29 +825,6 @@ void afficheHitMarker(){
   
 }
 
-void afficheBarrePV(){
-  fill(0);
-  rect(20,10,225,25);
-  fill(0,255,0);
-  float xBar = map(pv,0,100,0,221);
-  rect(22,12,xBar,21);
-  
-  //barre de pv des bases:
-  fill(0);
-  stroke(255,0,0);
-  rect(489,440,100,15);
-  xBar = map(baseA.vie,0,5000,0,96);
-  fill(255,0,0);
-  rect(491,442,xBar,11);
-  
-  fill(0);
-  stroke(0,100,255);
-  rect(489,465,100,15);
-  xBar = map(baseB.vie,0,5000,0,96);
-  fill(0,100,255);
-  rect(491,467,xBar,11);
-  
-}
 
 void afficheBase(){
  int x = width/2 - (xPers - baseA.getX());
@@ -833,18 +845,31 @@ void afficheBase(){
 
 
 void demandePseudo(){
+  fill(255);
+  textSize(25);
+  text("Comment souhaite tu t'appeler?",100,250);
   fill(0);
-  textSize(20);
-  text("Comment souhaite tu t'appeler?",50,100);
+  textSize(25);
+  text("Comment souhaite tu t'appeler?",99,249);
   
   
   
   if(keyPressed == true && antiRepet == 0){
-    if(key == ' '){
-      pseudo_OK = 1;  
-    }
     antiRepet = 1;
-    pseudo = pseudo + key;
+    //on vérifie si l'utilisateur ne veux pas supprimer un caractère
+    if(keyCode == LEFT){
+      //Cette manipulation permet de supprimer un caractère.
+      String newPseudo = "";
+      for(int i = 0; i < pseudo.length()-1;i++){
+        newPseudo = newPseudo + pseudo.charAt(i);
+      }
+      pseudo = newPseudo;  
+    }
+    
+    else if(pseudo.length() < 9){
+      //On limite à 9 caractères
+      pseudo = pseudo + key;
+    }
     
   }
   if(keyPressed == false && antiRepet == 1){
@@ -855,8 +880,94 @@ void demandePseudo(){
   rect((width-250)/2,(height-70)/2,250,70);
   
   fill(0);
-  rect(pseudo.length()*28+(width-250)/2,(height-70)/2+3,3,64);
-  textSize(50);
-  text(pseudo,(width-250)/2+5,(height-70)/2+50);
+  textSize(45);
+  text(pseudo+"|",(width-250)/2+5,(height-70)/2+50);
+  
+  //on affiche un bouton valider
+  
+  fill(0,200,0); 
+  
+  //la couleur(et le curseur) vari en fonction de si le curseur est sur le bouton ou non
+  if(mouseX > (width-150)/2 && mouseX < (width-150)/2 + 150 && mouseY > (height-60)/2+70 && mouseY < (height-60)/2 + 130){
+    cursor(HAND);
+    fill(0,100,0);
+    
+    //Si jamais on clique, ça valide
+    if(mousePressed == true){
+      pseudo_OK = 1;  
+    }
+  }
+  else if(mouseX > (width-250)/2 && mouseX < (width-250)/2 + 250 && mouseY > (height-70)/2 && mouseY < (height-70)/2 + 70){
+    cursor(TEXT);
+  }
+  else{
+    cursor(ARROW);   
+  }
+
+  
+  rect((width-150)/2,(height-60)/2+70,150,60);
+  
+  textSize(30);
+  fill(0);
+  text("VALIDER",(width-150)/2+13,(height-60)/2+110);
+  
+}
+
+
+void infoCarte(){
+  //affichage pseudo personnage + pv
+  for(int i = 0; i < nb_joueur;i++){
+    int x = width/2 - (xPers - joueur[i].getX());
+    int y = height/2 - (yPers - joueur[i].getY()); 
+    if(joueur[i].getEquipe() == 1){
+      fill(255,0,0,100);
+    }
+    else{
+      fill(0,50,255,100);  
+    }
+    rect(x-50,y+40,100,40);
+    fill(255,255,0);
+    textSize(15);
+    text(joueur[i].getPseudo(),x-40,y+55);
+    fill(0,255,0,75);
+    rect(x-48,y+65,map(joueur[i].getVie(),0,100,0,96),10);
+    noFill();
+    rect(x-48,y+65,96,10);
+  }
+  
+  //on affiche la carte
+  if(equipe == 1){
+    fill(255,0,0,100);
+  }
+  else{
+    fill(0,50,255,100);  
+  }
+  rect(10,10,150,60);
+  fill(255,255,0);
+  textSize(20);
+  text(pseudo,15,35);
+  fill(0,255,0,75);
+  rect(12,50,map(pv,0,100,0,146),15);
+  noFill();
+  rect(12,50,146,15);
+  
+  
+}
+
+void affichePvBase(){
+  //barre de pv des bases:
+  fill(0);
+  stroke(255,0,0);
+  rect(489,440,100,15);
+  float xBar = map(baseA.vie,0,5000,0,96);
+  fill(255,0,0);
+  rect(491,442,xBar,11);
+  
+  fill(0);
+  stroke(0,100,255);
+  rect(489,465,100,15);
+  xBar = map(baseB.vie,0,5000,0,96);
+  fill(0,100,255);
+  rect(491,467,xBar,11);  
   
 }
