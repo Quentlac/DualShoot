@@ -1,0 +1,105 @@
+<html>
+	<head>	
+		<title>Inscription bêta</title>
+		<meta charset=utf-8>
+	</head>
+	<style>
+		html{
+			background: url(ap.png) no-repeat center fixed;
+
+			-webkit-background-size: cover; /* pour anciens Chrome et Safari */
+ 			 background-size: cover; /* version standardisée */
+
+		}
+		
+		#explication{
+			position: absolute;
+			top: 0px;
+			bottom: 0px;
+			font-family: Arial;
+			
+			background-color: rgba(255,255,255,0.5);
+
+			padding: 25px;
+	
+		}
+
+		input[type=submit]{
+			width: 320px;
+			height: 70px;
+
+			border: 3px solid black;
+
+			background-color: black;
+			color: white;
+			font-size: 20px;
+
+			transition: 0.5s;
+
+		}
+
+		input[type=submit]:hover{
+			cursor: pointer;
+			background-color: white;
+			color: black;
+
+			text-decoration: none;
+			
+
+		}
+
+		input[type=text]{
+			width: 320px;
+			height: 60px;
+
+			padding-left: 10px;
+
+			border: 1px solid black;
+
+			font-size: 20px;
+
+
+		}
+
+		input[type=text]:focus{
+			border: 2px solid black;	
+			
+
+		}
+
+		#video{
+			position: absolute;
+			right: 10%;
+			top: 30%;
+
+		}
+
+
+	</style>
+
+	<body>
+		<table border=0 width=100%><tr><td>
+		<div id=explication align=center>
+			<p><br></p>
+			<p><br></p>
+			<p><br></p>	
+			<h1>Préinscription à la bêta</h1>
+			<p>Inscrivez vous pour le programme bêta de DualShoot afin<br> d'y jouer avant sa sortie officiele. Nous vous avertirons<br> par mail lorsqu'il sera disponible</p>
+			
+			<form method=POST action=send_demande.php>
+			<input type=text name=pseudo placeholder="Pseudo..."><p>
+			<input type=text name=mail placeholder="Email..."><p>
+			<input type=submit value=Valider>
+			</form>
+
+
+			</div>	
+		</td><td>
+		<div id=video>
+
+
+		</div></td></tr></table>
+	</body>
+
+
+</html>

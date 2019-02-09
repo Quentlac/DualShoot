@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import socket
 import select
 import time
@@ -6,11 +8,14 @@ import json
 from math import *
 from random import randint
 
+#Correspond à la version du jeu
+version = 0.1
+
 class Joueur:
 	x = 0
 	y = 0
 
-	vie = 100
+	vie = 0
 
 	angle = 0
 
@@ -176,6 +181,10 @@ liste_client = []
 
 nb_joueur = 0
 
+#Cette variable est a 1 lorsque les bases vont respawn(Relancement d'une partie)
+base_respawn = 0
+tmpBaseRespawn = 0
+
 joueur = []
 
 arbre = []
@@ -186,7 +195,7 @@ map_game = []
 
 
 #on charge la map
-filemap = open("map", "r")
+filemap = open("/home/debian/DualShoot/map", "r")
 filemapjson = filemap.read()
 
 mapJson = json.loads(filemapjson)
@@ -260,7 +269,10 @@ def lancePartie():
 
 	#On elimine tous les joueurs
 	for loop in range(nb_joueur):
-		joueur[loop].supprVie(100)
+		#on ne fait ca qu'au joueur qui on encore de la vie pour eviter que des personnes ayant quitte le jeu ressucite
+		if(joueur[loop].getVie() > 0):
+			joueur[loop].supprVie(100)
+			joueur[loop].respawn = time.time()
 	
 	
 	
@@ -281,9 +293,8 @@ while True:
 		#On ajoute le joueur dans la liste des clients
 		liste_client.append(socket_client)
 
-		print("Nouveau client connecte")
-		message_tchat = "Nouvelle pers connect! ("+str(nb_joueur)+")"
-
+		print("Nouvelle connexion")
+		
 		#on cree le joueur
 		
 		player = Joueur()
@@ -420,13 +431,15 @@ while True:
 		message = message + "baseBY: " + str(baseB.getPosY()) + ","
 		message = message + "baseBPv: " + str(baseB.getVie()) + ","
 		
+		#On envoi la version du jeu:
+		message = message + "version:" + str(version)+","
 
 		message = message + "tchat: \""
 
 		#On envoi le tchat si il y a un msg a envoye:
+		
 		if(message_tchat != "-"):
 			message = message + message_tchat
-			message_tchat = "-"
 		else:
 			#le - signifie rien pour le client
 			message = message + "-"	
@@ -439,10 +452,12 @@ while True:
 		try:
 			#si client est = a 0 cela signifie que le client est parti (voir un plus bas)
 			if(client != 0):
-				client.send(message)
+				
+				client.send(message.encode('utf-8'))
 		except socket.error:
-			print("Client("+str(id_joueur)+") est parti")
-			message_tchat = "Une pers est partie! ("+str(id_joueur)+")"
+			#Ici cette erreur montre que le client s'est deco
+			print(joueur[id_joueur].getPseudo()+" est parti")
+			message_tchat = joueur[id_joueur].getPseudo()+" est parti"
 
 			liste_client[id_joueur] = 0
 
@@ -452,8 +467,11 @@ while True:
 			else:
 				baseB.nbJ -= 1	
 			joueur[id_joueur].supprVie(100)
-
 		id_joueur += 1
+
+	#On supprime le message chat une fois qu'il a ete envoye a tt le monde pour eviter quil se repete
+	if(message_tchat != "-"):
+		message_tchat = "-"
 
 	#maintenant apres avoir donne des "ordres" au client on va l'ecouter
 
@@ -463,9 +481,12 @@ while True:
 
 	for client in client_send_msg:
 		message_valide = 1
-		
-		message = client.recv(1024)
-
+		try:
+			message_oct = client.recv(1024)
+			message = message_oct.decode('utf-8')
+		except AttributeError:	
+		#Si jamais le client s'est deconnecté juste avant d'envoyer un message
+			message = "-"
 		#print(message)
 
 		#On doit traiter le message qui normalement est du JSON si tous va bien.
@@ -479,12 +500,16 @@ while True:
 			id_client = json_msg['ID']
 
 			#On regarde que le joueur soit en vie pour se deplacer ou tirer
-			if(joueur[id_client].getVie() > 0):
+			#Et aussi que les bases soit encores la(Pas en fin de partie)
+			if(joueur[id_client].getVie() > 0 and baseA.getVie() > 0 and baseB.getVie() > 0):
 
 				joueur[id_client].setAngle(json_msg['ang'])
-
+				
+				
 				#on recupere le pseudo
 				joueur[id_client].setPseudo(json_msg['pseudo'])
+
+		
 
 				#on cree une variable vitesse pour pouvoir changer plus rapidement
 				vitesse = 10
@@ -522,12 +547,22 @@ while True:
 						balle.append(nouvelle_balle)
 				else:
 					joueur[id_client].setStatus(0)
+			else:
+				#Si le joueur n'a pas de vie c'est peut etre car il etais entrain de marquer son pseudo
+				if(joueur[id_client].getPseudo() == "-"):
+					#on recupere le pseudo
+					joueur[id_client].setPseudo(json_msg['pseudo'])
+
+					joueur[id_client].vie = 100
+
+					message_tchat = joueur[id_client].getPseudo() + " a rejoins la partie!"
+					print(joueur[id_client].getPseudo() + " a rejoins la partie!")
 	
 	#On fait bouger toutes les balles tirees
 	for loop in range(len(balle)):
 		#La condition si dessous permet d'eviter le bug(IndexOutOfRange) dans le cas ou l'on supprime une balle
 		if(loop < len(balle)):
-			balle[loop].move(15)
+			balle[loop].move(20)
 			#On detect la colision avec les autres objets
 			if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) != 0):
 				#La balle touche on va donc la supprimer
@@ -539,8 +574,9 @@ while True:
 					joueur[joueur_touche].supprVie(10)
 					if(joueur[joueur_touche].getVie() <= 0):
 						#Le joueurs est mort on envoi un petit msg sur le chat
-						message_tchat = str(balle[loop].getIdJoueur())+" a elimine "+str(joueur_touche)
-						#Ensuite on fait respawn le personnage
+						message_tchat = str(joueur[balle[loop].getIdJoueur()].getPseudo())+" a elimine "+str(joueur[joueur_touche].getPseudo())
+						
+#Ensuite on fait respawn le personnage
 						joueur[joueur_touche].respawn = time.time()
 				if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == -3):	
 					#Colision avec la baseA
@@ -575,7 +611,16 @@ while True:
 	
 	if(baseA.vie <= 0 or baseB.vie <= 0):
 		#La partie est fini et on recommence
-		lancePartie()
+		if(base_respawn == 0):
+			base_respawn = 1
+			tmpBaseRespawn = time.time()
+		elif(time.time() - tmpBaseRespawn > 15):
+			base_respawn = 0
+			lancePartie()
+		
+		if(base_respawn == 1):
+			#La presence d'un # permet de dire que c'est un message a afficher en gros
+			message_tchat = "#Nouvelle partie dans: "+str(int(20-(time.time() - tmpBaseRespawn)))+" s"
 						
 	
 			

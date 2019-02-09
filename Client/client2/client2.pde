@@ -1,5 +1,12 @@
 import processing.net.*;
 
+float version_client = 0.1;
+float version_serveur = 0.1;
+
+
+//cette variable sera a 1 lorque la cmd link aura ete lance, ca evite d'ouvrir plein de page et de faire crash le pc
+int open_nav = 0;
+
 Client c;
 
 //-1 = pas encore init
@@ -293,12 +300,17 @@ int pseudo_OK = 0;
 //cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
 int antiRepet = 0;
 
+//Ici est stocké les messages importants à affiché en gros (commencant par #)
+String tchatImportant = "";
+//cette variable permet de savoir depuis combien de temps est affiché un msg important afin de l'effacer au bout d'un moment. 
+long timeTchatImportant = 0;
+
 
 void setup(){
   size(600,600); 
   frameRate(60);
   
-  c = new Client(this, "localhost", 222);
+  c = new Client(this, "quentin-fr.ddns.net", 222);
 
   
   for (int i = 0; i < 100; i++) {
@@ -393,43 +405,62 @@ void setup(){
 void draw(){
   background(255);
   
-  connect_serveur();
+  //on test déja si la version du client est à jour:
+  if(version_client == version_serveur){
   
+    connect_serveur();
+    
+    
+    //on test si l'id_client est valide pour effectuer les actions suivante
+    if(id_client != -1){
+      setAnglePers();
+      affichage_map();
   
-  //on test si l'id_client est valide pour effectuer les actions suivante
-  if(id_client != -1){
-    setAnglePers();
-    affichage_map();
-
-    
-    afficheBalle();
-    
-    //on affiche pas le personnage si le pseudo n'est pas affiché, pour éviter qq bug d'affichage
-    if(pseudo_OK == 1){
-      affiche_personnage();
+      
+      afficheBalle();
+      
+      //on affiche pas le personnage si le pseudo n'est pas affiché, pour éviter qq bug d'affichage
+      if(pseudo_OK == 1){
+        affiche_personnage();
+      }
+      
+      affiche_limite();
+      afficheObjet();
+      afficheBase();
+      afficheHitMarker();
+      
+      infoCarte();
+      
+      affichePvBase();
+      afficheMiniMap();
+      
+      afficheTchat();
+     
+      
+      //coordone(debug)
+      /*textSize(25);
+      fill(255,0,0);
+      text(xPers+","+yPers,100,100);*/
+      
+      afficheEcranFin();
+     
+    } 
+    if(pseudo_OK == 0){
+      //on règle le pseudo
+      demandePseudo();
+      
     }
-    
-    affiche_limite();
-    afficheObjet();
-    afficheBase();
-    afficheHitMarker();
-    
-    infoCarte();
-    
-    affichePvBase();
-    afficheMiniMap();
-    
-    afficheTchat();
-    
-    //coordone(debug)
+  }
+  else{
+    //on envoi la personne télécharger la mise à jour
+    fill(0);
     textSize(25);
-    fill(255,0,0);
-    text(xPers+","+yPers,100,100);
-   
-  } 
-  if(pseudo_OK == 0){
-    //on règle le pseudo
-    demandePseudo();
+    textAlign(CENTER);
+    text("Il semblerait que tu utilises une vielle version,\ntélécharges la nouvelle et supprime celle ci.",width/2,height/2);
+    if(open_nav == 0){
+      open_nav = 1;
+      link("http://192.168.1.12/DualShoot/File/dualshoot"+str(version_serveur)+".zip");
+    }
     
   }
 }
@@ -460,6 +491,8 @@ void connect_serveur(){
           
           pv = json.getInt("pv");
           equipe = json.getInt("equipe");
+          
+          
           
           
           JSONArray posX = json.getJSONArray("pX");
@@ -502,9 +535,19 @@ void connect_serveur(){
           baseB.setX(json.getInt("baseBX"));
           baseB.setY(json.getInt("baseBY"));
           baseB.vie = json.getInt("baseBPv");
+          
+          version_serveur = json.getFloat("version");
                     
           //on recupère aussi le tchat serveur
           String newTchat = json.getString("tchat");
+          if(newTchat.charAt(0) == '#'){
+            //C'est un message important
+            //le substring sert a enlever le #
+            tchatImportant = newTchat.substring(1);
+            timeTchatImportant = millis();
+            
+            newTchat = "-";
+          }
           
           if(newTchat.indexOf("-") == -1){
             //on decale tous dans le tabelau tchat pour ne garder que les derniers messages.
@@ -548,6 +591,8 @@ void test_commande(){
     }
     if(key_E == 1)message_cmd = message_cmd + "TAKE;";
     c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
+    
+
   }
   else{
     c.write("{\"ID\": "+id_client+" , \"cmd\": \"NULL\", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
@@ -730,17 +775,43 @@ void afficheObjet(){
 }
 
 void afficheTchat(){
-  textSize(10);
+  textSize(12);
   
   fill(255,255,255,100);
   
-  rect(10,500,300,90);
-  fill(255,0,0);
   
   
+  float tailleMax = 0;
   
-  text(tchat[4]+"\n"+tchat[3]+"\n"+tchat[2]+"\n"+tchat[1]+"\n"+tchat[0]+"\n",20,515);  
+  //on remplace toutes ligne null par rien pour éviter de marque null à chaque fois
+  for(int i = 0; i < 5;i++){
+    if(tchat[i] == null){
+      tchat[i] = "";  
+    }
+    //on calcul aussi la taille du plus grand message afin d'adapter le rectangle
+    tailleMax = textWidth(tchat[i]);
+  }
   
+  rect(10,475,tailleMax+30,120);
+  
+  fill(255); 
+  text(tchat[4]+"\n"+tchat[3]+"\n"+tchat[2]+"\n"+tchat[1]+"\n"+tchat[0]+"\n",19,490); 
+  fill(0); 
+  text(tchat[4]+"\n"+tchat[3]+"\n"+tchat[2]+"\n"+tchat[1]+"\n"+tchat[0]+"\n",20,490);  
+  
+  //on regarde pour les messages importants
+  if(tchatImportant != null && millis() - timeTchatImportant < 5000){
+    //on l'affiche
+    
+    textSize(25);
+    textAlign(CENTER);
+    fill(255);
+    text(tchatImportant,width/2-1,height-199);
+    fill(0);
+    text(tchatImportant,width/2,height-200);
+    textAlign(LEFT);
+    
+  }
   
 }
 
@@ -847,10 +918,10 @@ void afficheBase(){
 void demandePseudo(){
   fill(255);
   textSize(25);
-  text("Comment souhaite tu t'appeler?",100,250);
+  text("Comment souhaites tu t'appeler?",100,250);
   fill(0);
   textSize(25);
-  text("Comment souhaite tu t'appeler?",99,249);
+  text("Comment souhaites tu t'appeler?",99,249);
   
   
   
@@ -969,5 +1040,46 @@ void affichePvBase(){
   xBar = map(baseB.vie,0,5000,0,96);
   fill(0,100,255);
   rect(491,467,xBar,11);  
+  
+}
+
+void afficheEcranFin(){
+  //Cette écran correspond à l'affichage de la victoire ou de la défaite.
+  
+  
+  textAlign(CENTER);
+  textSize(50);
+
+  
+  if(equipe == 1 && baseB.vie <= 0){
+    //Victoire  
+    fill(255);
+    text("Bravo vous etes\nles VAINQUEURS!!!",width/2,height/2-100);
+    fill(100,0,0);
+    text("Bravo vous etes\nles VAINQUEURS!!!",width/2,height/2-99);
+  }
+  if(equipe == 2 && baseB.vie <= 0){
+    //Defaite  
+    fill(255);
+    text("vous avez\nPERDU!!!",width/2,height/2-100);
+    fill(0,0,100);
+    text("vous avez\nPERDU!!!",width/2,height/2-99);
+  }
+  if(equipe == 1 && baseA.vie <= 0){
+    //Defaite
+    fill(255);
+    text("vous avez\nPERDU!!!",width/2,height/2-100);
+    fill(100,0,0);
+    text("vous avez\nPERDU!!!",width/2,height/2-99);
+  }
+  if(equipe == 2 && baseA.vie <= 0){
+    //Victoire
+    fill(255);
+    text("Bravo vous etes\nles VAINQUEURS!!!",width/2,height/2-100);
+    fill(0,0,100);
+    text("Bravo vous etes\nles VAINQUEURS!!!",width/2,height/2-99);
+  }
+  
+  textAlign(LEFT);
   
 }
