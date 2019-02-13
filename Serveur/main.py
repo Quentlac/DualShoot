@@ -32,6 +32,8 @@ class Joueur:
 
 	pseudo = ""
 
+	tmpSend = 0
+
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
 
@@ -195,7 +197,7 @@ map_game = []
 
 
 #on charge la map
-filemap = open("/home/debian/DualShoot/map", "r")
+filemap = open("map", "r")
 filemapjson = filemap.read()
 
 mapJson = json.loads(filemapjson)
@@ -330,143 +332,145 @@ while True:
 	#on envoi toutes les infos aux joueurs
 	id_joueur = 0
 	for client in liste_client:
-		message = "{"
-		message = message + "ID:" + str(id_joueur)+","
+		if(time.time() - joueur[id_joueur].tmpSend > 0.05):
+			joueur[id_joueur].tmpSend = time.time()
+			message = "{"
+			message = message + "ID:" + str(id_joueur)+","
 
-		message = message + "X:" + str(joueur[id_joueur].getPosX())+","
-		message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
+			message = message + "X:" + str(joueur[id_joueur].getPosX())+","
+			message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
 
 
-		message = message + "pv:" + str(joueur[id_joueur].getVie())+","
+			message = message + "pv:" + str(joueur[id_joueur].getVie())+","
 
-		message = message + "equipe:" + str(joueur[id_joueur].equipe)+","
+			message = message + "equipe:" + str(joueur[id_joueur].equipe)+","
 
-		#la position de chaque joueur
-		message = message + "pX:[";
-		for loop in range(nb_joueur):
-			#On affiche que les joueurs en vie(non deco) et 
-			#ceux qui sont dans le champ de vision
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].getPosX()) + ",";
+			#la position de chaque joueur
+			message = message + "pX:[";
+			for loop in range(nb_joueur):
+				#On affiche que les joueurs en vie(non deco) et 
+				#ceux qui sont dans le champ de vision
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].getPosX()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		message = message + "pY:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].getPosY()) + ",";
+			message = message + "pY:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].getPosY()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi aussi les angles des joueurs
+			#On envoi aussi les angles des joueurs
 
-		message = message + "pAngle:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].getAngle()) + ",";
+			message = message + "pAngle:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].getAngle()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi le status des joueurs:
-		message = message + "pStatus:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].getStatus()) + ",";
+			#On envoi le status des joueurs:
+			message = message + "pStatus:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].getStatus()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi le pseudo des joueurs:
-		message = message + "pPseudo:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + "\'" + str(joueur[loop].getPseudo()) + "\',";
+			#On envoi le pseudo des joueurs:
+			message = message + "pPseudo:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + "\'" + str(joueur[loop].getPseudo()) + "\',";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi les pv des joueurs:
-		message = message + "pVie:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].getVie()) + ",";
+			#On envoi les pv des joueurs:
+			message = message + "pVie:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].getVie()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi les equipes des joueurs:
-		message = message + "pEquipe:[";
-		for loop in range(nb_joueur):
-			if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				if(id_joueur != loop):				
-					message = message + str(joueur[loop].equipe) + ",";
+			#On envoi les equipes des joueurs:
+			message = message + "pEquipe:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].equipe) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi maintenant la position des balles
-		message = message + "bX:[";
-		for loop in range(len(balle)):
-			#celles qui sont dans le champ de vision
-			if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				message = message + str(balle[loop].getPosX()) + ",";
+			#On envoi maintenant la position des balles
+			message = message + "bX:[";
+			for loop in range(len(balle)):
+				#celles qui sont dans le champ de vision
+				if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					message = message + str(balle[loop].getPosX()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		message = message + "bY:[";
-		for loop in range(len(balle)):
-			if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
-				message = message + str(balle[loop].getPosY()) + ",";
+			message = message + "bY:[";
+			for loop in range(len(balle)):
+				if(abs(balle[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(balle[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					message = message + str(balle[loop].getPosY()) + ",";
 
-		message = message + "],"
+			message = message + "],"
 
-		#On envoi la positon des bases des equipes et les pv:
-		message = message + "baseAX: " + str(baseA.getPosX()) + ","
-		message = message + "baseAY: " + str(baseA.getPosY()) + ","
-		message = message + "baseAPv: " + str(baseA.getVie()) + ","
+			#On envoi la positon des bases des equipes et les pv:
+			message = message + "baseAX: " + str(baseA.getPosX()) + ","
+			message = message + "baseAY: " + str(baseA.getPosY()) + ","
+			message = message + "baseAPv: " + str(baseA.getVie()) + ","
 
-		message = message + "baseBX: " + str(baseB.getPosX()) + ","
-		message = message + "baseBY: " + str(baseB.getPosY()) + ","
-		message = message + "baseBPv: " + str(baseB.getVie()) + ","
+			message = message + "baseBX: " + str(baseB.getPosX()) + ","
+			message = message + "baseBY: " + str(baseB.getPosY()) + ","
+			message = message + "baseBPv: " + str(baseB.getVie()) + ","
 		
-		#On envoi la version du jeu:
-		message = message + "version:" + str(version)+","
+			#On envoi la version du jeu:
+			message = message + "version:" + str(version)+","
 
-		message = message + "tchat: \""
+			message = message + "tchat: \""
 
-		#On envoi le tchat si il y a un msg a envoye:
+			#On envoi le tchat si il y a un msg a envoye:
 		
-		if(message_tchat != "-"):
-			message = message + message_tchat
-		else:
-			#le - signifie rien pour le client
-			message = message + "-"	
-
-		message = message + "\","
-
-
-		message = message + "}"
-
-		try:
-			#si client est = a 0 cela signifie que le client est parti (voir un plus bas)
-			if(client != 0):
-				
-				client.send(message.encode('utf-8'))
-		except socket.error:
-			#Ici cette erreur montre que le client s'est deco
-			print(joueur[id_joueur].getPseudo()+" est parti")
-			message_tchat = joueur[id_joueur].getPseudo()+" est parti"
-
-			liste_client[id_joueur] = 0
-
-			#On supprime le joueur de la base associe
-			if(joueur[id_joueur].equipe == 1):
-				baseA.nbJ -= 1
+			if(message_tchat != "-"):
+				message = message + message_tchat
 			else:
-				baseB.nbJ -= 1	
-			joueur[id_joueur].supprVie(100)
+				#le - signifie rien pour le client
+				message = message + "-"	
+
+			message = message + "\","
+
+
+			message = message + "}"
+
+			try:
+				#si client est = a 0 cela signifie que le client est parti (voir un plus bas)
+				if(client != 0):
+				
+					client.send(message.encode('utf-8'))
+			except socket.error:
+				#Ici cette erreur montre que le client s'est deco
+				print(joueur[id_joueur].getPseudo()+" est parti")
+				message_tchat = joueur[id_joueur].getPseudo()+" est parti"
+
+				liste_client[id_joueur] = 0
+
+				#On supprime le joueur de la base associe
+				if(joueur[id_joueur].equipe == 1):
+					baseA.nbJ -= 1
+				else:
+					baseB.nbJ -= 1	
+				joueur[id_joueur].supprVie(100)
 		id_joueur += 1
 
 	#On supprime le message chat une fois qu'il a ete envoye a tt le monde pour eviter quil se repete
@@ -517,21 +521,28 @@ while True:
 
 				cmd = json_msg['cmd']
 
-				if(cmd.find("RIGHT") != -1):
-					if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
-						joueur[id_client].moveToRight(vitesse)
+				#if(cmd.find("RIGHT") != -1):
+				#	if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
+				#		joueur[id_client].moveToRight(vitesse)
 
-				if(cmd.find("LEFT") != -1):
-					if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) == 0):
-						joueur[id_client].moveToLeft(vitesse)
+				#if(cmd.find("LEFT") != -1):
+				#	if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) == 0):
+				#		joueur[id_client].moveToLeft(vitesse)
 			
-				if(cmd.find("UP") != -1):
-					if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) == 0):
-						joueur[id_client].moveToUp(vitesse)
+				#if(cmd.find("UP") != -1):
+				#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) == 0):
+				#		joueur[id_client].moveToUp(vitesse)
 
-				if(cmd.find("DOWN") != -1):
-					if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) == 0):
-						joueur[id_client].moveToDown(vitesse)
+				#if(cmd.find("DOWN") != -1):
+				#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) == 0):
+				#		joueur[id_client].moveToDown(vitesse)
+
+				#on recupere les coordone
+				if(abs(json_msg['x'] - joueur[id_client].getPosX()) < 50 or abs(json_msg['y'] - joueur[id_client].getPosY()) < 50):
+					#Le serveur valide les coordone. On les enregistre si pas de colison
+					if(detectColision(json_msg['x'],json_msg['y'],id_client) == 0):
+						joueur[id_client].setPosition(json_msg['x'],json_msg['y'])
+
 			
 				#On regarde maintenant si je joueur veux tirer
 				tir = json_msg['tir']
@@ -543,7 +554,7 @@ while True:
 						#on remet le 'compteur' a 0
 						joueur[id_client].setCadTir(time.time())
 						nouvelle_balle = Balle()
-						nouvelle_balle.init(id_client,json_msg['ang'],joueur[id_client].getPosX(),joueur[id_client].getPosY())
+						nouvelle_balle.init(id_client,json_msg['ang'],json_msg['x'],json_msg['y'])
 						balle.append(nouvelle_balle)
 				else:
 					joueur[id_client].setStatus(0)
