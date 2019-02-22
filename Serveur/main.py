@@ -7,6 +7,7 @@ import os
 import json
 from math import *
 from random import randint
+import mysql.connector
 
 #Correspond à la version du jeu
 version = 0.1
@@ -33,6 +34,10 @@ class Joueur:
 	pseudo = ""
 
 	tmpSend = 0
+
+
+	#Cette variable contient l'action en cours (UP=1, RIGHT=2, DOWN=3, LEFT=4)
+	action = 0
 
 	def supprVie(self,valeur):
 		self.vie = self.vie - valeur
@@ -174,8 +179,9 @@ main_socket.listen(5)
 print("Serveur pret!!!")
 
 
-
-
+#Connexion a la base de donne
+mysqlBdd = mysql.connector.connect(host="localhost",user="quentin",password="q24L23s1975N1974", database="dualshoot")
+database = mysqlBdd.cursor()
 
 #Definition des variables
 
@@ -332,7 +338,7 @@ while True:
 	#on envoi toutes les infos aux joueurs
 	id_joueur = 0
 	for client in liste_client:
-		if(time.time() - joueur[id_joueur].tmpSend > 0.05):
+		if(time.time() - joueur[id_joueur].tmpSend > 0.01):
 			joueur[id_joueur].tmpSend = time.time()
 			message = "{"
 			message = message + "ID:" + str(id_joueur)+","
@@ -380,6 +386,15 @@ while True:
 				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
 					if(id_joueur != loop):				
 						message = message + str(joueur[loop].getStatus()) + ",";
+
+			message = message + "],"
+
+			#On envoi les actions des joueurs:
+			message = message + "pAction:[";
+			for loop in range(nb_joueur):
+				if(joueur[loop].getVie() > 0 and abs(joueur[loop].getPosX() - joueur[id_joueur].getPosX()) < 400 and abs(joueur[loop].getPosY() - joueur[id_joueur].getPosY()) < 400):
+					if(id_joueur != loop):				
+						message = message + str(joueur[loop].action) + ",";
 
 			message = message + "],"
 
@@ -502,72 +517,92 @@ while True:
 
 		if(message_valide == 1):
 			id_client = json_msg['ID']
+			
+			#On cree plusieurs commande
+			if(json_msg['cmd'] == "move"):
 
-			#On regarde que le joueur soit en vie pour se deplacer ou tirer
-			#Et aussi que les bases soit encores la(Pas en fin de partie)
-			if(joueur[id_client].getVie() > 0 and baseA.getVie() > 0 and baseB.getVie() > 0):
+				#On regarde que le joueur soit en vie pour se deplacer ou tirer
+				#Et aussi que les bases soit encores la(Pas en fin de partie)
+				if(joueur[id_client].getVie() > 0 and baseA.getVie() > 0 and baseB.getVie() > 0):
 
-				joueur[id_client].setAngle(json_msg['ang'])
+					joueur[id_client].setAngle(json_msg['ang'])
 				
 				
-				#on recupere le pseudo
-				joueur[id_client].setPseudo(json_msg['pseudo'])
-
-		
-
-				#on cree une variable vitesse pour pouvoir changer plus rapidement
-				vitesse = 10
-
-
-				cmd = json_msg['cmd']
-
-				#if(cmd.find("RIGHT") != -1):
-				#	if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
-				#		joueur[id_client].moveToRight(vitesse)
-
-				#if(cmd.find("LEFT") != -1):
-				#	if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) == 0):
-				#		joueur[id_client].moveToLeft(vitesse)
-			
-				#if(cmd.find("UP") != -1):
-				#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) == 0):
-				#		joueur[id_client].moveToUp(vitesse)
-
-				#if(cmd.find("DOWN") != -1):
-				#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) == 0):
-				#		joueur[id_client].moveToDown(vitesse)
-
-				#on recupere les coordone
-				if(abs(json_msg['x'] - joueur[id_client].getPosX()) < 50 or abs(json_msg['y'] - joueur[id_client].getPosY()) < 50):
-					#Le serveur valide les coordone. On les enregistre si pas de colison
-					if(detectColision(json_msg['x'],json_msg['y'],id_client) == 0):
-						joueur[id_client].setPosition(json_msg['x'],json_msg['y'])
-
-			
-				#On regarde maintenant si je joueur veux tirer
-				tir = json_msg['tir']
-				if(tir == "1"):
-					joueur[id_client].setStatus(2)
-
-					#On cree une balle pour le tir
-					if(time.time() - joueur[id_client].getCadTir() > 0.3):
-						#on remet le 'compteur' a 0
-						joueur[id_client].setCadTir(time.time())
-						nouvelle_balle = Balle()
-						nouvelle_balle.init(id_client,json_msg['ang'],json_msg['x'],json_msg['y'])
-						balle.append(nouvelle_balle)
-				else:
-					joueur[id_client].setStatus(0)
-			else:
-				#Si le joueur n'a pas de vie c'est peut etre car il etais entrain de marquer son pseudo
-				if(joueur[id_client].getPseudo() == "-"):
 					#on recupere le pseudo
 					joueur[id_client].setPseudo(json_msg['pseudo'])
 
-					joueur[id_client].vie = 100
+		
 
-					message_tchat = joueur[id_client].getPseudo() + " a rejoins la partie!"
-					print(joueur[id_client].getPseudo() + " a rejoins la partie!")
+					#on cree une variable vitesse pour pouvoir changer plus rapidement
+					vitesse = 10
+
+
+					cmd = json_msg['cmd']
+
+					#if(cmd.find("RIGHT") != -1):
+					#	if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
+					#		joueur[id_client].moveToRight(vitesse)
+
+					#if(cmd.find("LEFT") != -1):
+					#	if(detectColision(joueur[id_client].getPosX()-vitesse,joueur[id_client].getPosY(),id_client) == 0):
+					#		joueur[id_client].moveToLeft(vitesse)
+			
+					#if(cmd.find("UP") != -1):
+					#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()-vitesse,id_client) == 0):
+					#		joueur[id_client].moveToUp(vitesse)
+
+					#if(cmd.find("DOWN") != -1):
+					#	if(detectColision(joueur[id_client].getPosX(),joueur[id_client].getPosY()+vitesse,id_client) == 0):
+					#		joueur[id_client].moveToDown(vitesse)
+
+					#on recupere les coordone
+					if(abs(json_msg['x'] - joueur[id_client].getPosX()) < 50 or abs(json_msg['y'] - joueur[id_client].getPosY()) < 50):
+						#Le serveur valide les coordone. On les enregistre si pas de colison
+						if(detectColision(json_msg['x'],json_msg['y'],id_client) == 0):
+							#On detect quel mouvement le joueur fait(HAUT, BAS...)	
+							if(json_msg['y'] == joueur[id_client].getPosY() and json_msg['x'] == joueur[id_client].getPosX()):
+								#le joueur n'a pas bouge	
+								joueur[id_client].action = 0				
+							elif(json_msg['y'] > joueur[id_client].getPosY()):
+								#DOWN
+								joueur[id_client].action = 3
+							elif(json_msg['y'] < joueur[id_client].getPosY()):
+								#UP
+								joueur[id_client].action = 1
+							elif(json_msg['x'] < joueur[id_client].getPosX()):
+								#LEFT
+								joueur[id_client].action = 4
+							elif(json_msg['x'] > joueur[id_client].getPosX()):
+								#RIGHT
+								joueur[id_client].action = 2
+
+							joueur[id_client].setPosition(json_msg['x'],json_msg['y'])
+
+			
+					#On regarde maintenant si je joueur veux tirer
+					tir = json_msg['tir']
+					if(tir == "1"):
+						joueur[id_client].setStatus(2)
+
+						#On cree une balle pour le tir
+						if(time.time() - joueur[id_client].getCadTir() > 0.3):
+							#on remet le 'compteur' a 0
+							joueur[id_client].setCadTir(time.time())
+							nouvelle_balle = Balle()
+							nouvelle_balle.init(id_client,json_msg['ang'],json_msg['x'],json_msg['y'])
+							balle.append(nouvelle_balle)
+					else:
+						joueur[id_client].setStatus(0)
+				else:
+					#Si le joueur n'a pas de vie c'est peut etre car il etais entrain de marquer son pseudo
+					if(joueur[id_client].getPseudo() == "-"):
+						#on recupere le pseudo
+						joueur[id_client].setPseudo(json_msg['pseudo'])
+
+						joueur[id_client].vie = 100
+
+						message_tchat = joueur[id_client].getPseudo() + " a rejoins la partie!"
+						print(joueur[id_client].getPseudo() + " a rejoins la partie!")
 	
 	#On fait bouger toutes les balles tirees
 	for loop in range(len(balle)):
@@ -587,7 +622,7 @@ while True:
 						#Le joueurs est mort on envoi un petit msg sur le chat
 						message_tchat = str(joueur[balle[loop].getIdJoueur()].getPseudo())+" a elimine "+str(joueur[joueur_touche].getPseudo())
 						
-#Ensuite on fait respawn le personnage
+						#Ensuite on fait respawn le personnage
 						joueur[joueur_touche].respawn = time.time()
 				if(detectColision(balle[loop].getPosX(),balle[loop].getPosY(),balle[loop].getIdJoueur()) == -3):	
 					#Colision avec la baseA
@@ -634,8 +669,9 @@ while True:
 			message_tchat = "#Nouvelle partie dans: "+str(int(20-(time.time() - tmpBaseRespawn)))+" s"
 						
 	
-			
-	
+		
+#on ferme la connexion a la base de donne	
+mysqlBdd.close()
 			
 			
 

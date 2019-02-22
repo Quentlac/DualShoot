@@ -14,6 +14,8 @@ int id_client = -1;
 
 float angle_arme = 0;
 
+long tmpDepla;
+
 Joueur[] joueur = new Joueur[100];
 
 
@@ -35,6 +37,9 @@ class Joueur{
   
   int equipe = 1;
 
+  //cette variable permet de définir la dernière action d'un joueur afin d'augmenter la fluidité du jeu
+  int action = 0;
+  
   void setX(int Nx){
     x = Nx;      
   }
@@ -296,6 +301,7 @@ int pv = 100;
 int equipe = 1;
 
 int pseudo_OK = 0;
+int perso_OK = 0;
 
 //cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
 int antiRepet = 0;
@@ -413,11 +419,11 @@ void draw(){
   if(version_client == version_serveur){
   
     connect_serveur();
-    
-    
     //on test si l'id_client est valide pour effectuer les actions suivante
     if(id_client != -1){
-      test_commande();
+      if(pseudo_OK == 1 && perso_OK == 1){
+        test_commande();
+      }
       setAnglePers();
       affichage_map();
   
@@ -425,7 +431,7 @@ void draw(){
       afficheBalle();
       
       //on affiche pas le personnage si le pseudo n'est pas affiché, pour éviter qq bug d'affichage
-      if(pseudo_OK == 1){
+      if(pseudo_OK == 1 && perso_OK == 1){
         affiche_personnage();
       }
       
@@ -455,6 +461,10 @@ void draw(){
       demandePseudo();
       
     }
+    else if(perso_OK == 0){
+      choisPerso();  
+      
+    }
   }
   else{
     //on envoi la personne télécharger la mise à jour
@@ -481,8 +491,8 @@ void connect_serveur(){
     data = c.readStringUntil('}');  
 
     if(data != null){
-      println(data);
-      println("############################");
+      //println(data);
+      //println("############################");
       JSONObject json = parseJSONObject(data);
       if(json != null){ 
         //on récupère d'abord l'ID si on l'a pas encore
@@ -509,6 +519,7 @@ void connect_serveur(){
           JSONArray pseudoTab = json.getJSONArray("pPseudo");
           JSONArray vieTab = json.getJSONArray("pVie");
           JSONArray equipeTab = json.getJSONArray("pEquipe");
+          JSONArray actionTab = json.getJSONArray("pAction");
           
           JSONArray balleX = json.getJSONArray("bX");
           JSONArray balleY = json.getJSONArray("bY");
@@ -518,13 +529,16 @@ void connect_serveur(){
           //la taille du tableau correspond au nombre de joueur
           nb_joueur = posX.size();
           for(int i = 0; i < nb_joueur;i++){
-            joueur[i].setX(posX.getInt(i));
-            joueur[i].setY(posY.getInt(i));
+            if(joueur[i].action == 0 || abs(posX.getInt(i) - joueur[i].getX()) > 20 || abs(posY.getInt(i) - joueur[i].getY()) > 20){
+              joueur[i].setX(posX.getInt(i));
+              joueur[i].setY(posY.getInt(i));
+            }
             joueur[i].setAngle(angleTab.getInt(i));
             joueur[i].setStatus(statusTab.getInt(i));
             joueur[i].setPseudo(pseudoTab.getString(i));
             joueur[i].setVie(vieTab.getInt(i));
             joueur[i].setEquipe(equipeTab.getInt(i));
+            joueur[i].action = actionTab.getInt(i);
           }
           
           //la taille du tableau correspond au nombre de balle
@@ -573,10 +587,13 @@ void connect_serveur(){
 }
 
 void test_commande(){
-    
+  String message_cmd = "move";
+  println(millis() - tmpDepla);
+  if(millis() - tmpDepla > 60){
+    tmpDepla = millis();
     int vitesse = 10;
     
-    String message_cmd = "NULL";
+    
     
     if(key_RIGHT == 1){
       xPers += vitesse;   
@@ -590,7 +607,10 @@ void test_commande(){
     if(key_DOWN == 1){
       yPers += vitesse;  
     }
-
+    
+    //on fait bouger les autres joueurs
+    deplacementJoueur();
+  }
     
     if(millis() - tmpSend > 100){
       tmpSend = millis();
@@ -999,7 +1019,7 @@ void infoCarte(){
     rect(x-50,y+40,100,40);
     fill(255,255,0);
     textSize(15);
-    text(joueur[i].getPseudo(),x-40,y+55);
+    text(joueur[i].getPseudo()+"("+str(joueur[i].action)+")",x-40,y+55);
     fill(0,255,0,75);
     rect(x-48,y+65,map(joueur[i].getVie(),0,100,0,96),10);
     noFill();
@@ -1085,24 +1105,95 @@ void afficheEcranFin(){
 }
 
 void choisPerso(){
-  //Menu pour choisir son Personnage
-  //variable pour positionner les cartes
-  int xDep = 0-(200*personnage_choix);
+  fill(255,220,200);
   
-  for(int i = 0; i < 5;i++){
-    fill(i*50);
-    
-    rect(xDep+(i*200)+10,100,180,300);
-    
-    if(keyPressed == true){
-      if(keyCode == LEFT){
+  rect((width-300)/2,(height-400)/2,300,400);
+  
+  String[] listePerso = loadStrings("perso");
+  
+  JSONObject json = parseJSONObject(listePerso[0]);
+  
+  JSONArray persoTab = json.getJSONArray("perso");
+  
+  //personnage choisi
+  JSONObject caract_perso = persoTab.getJSONObject(personnage_choix);
+  
+  
+  fill(0);
+  textSize(25);
+  
+  //nom
+  textAlign(CENTER);
+  text(caract_perso.getString("nom"),width/2,(height-400)/2+50);
+  textAlign(LEFT);
+  
+  //Cadre pour image
+  noFill();
+  rect((width-250)/2,(height-400)/2+60,250,150);
+  
+  //on affiche l'image du personnages
+  PImage apercuPers = loadImage(caract_perso.getString("img"));
+  image(apercuPers,(width-150)/2,(height-400)/2+60,150,150);
+  
+ 
+  //chaque propriéte
+  textSize(15);
+  text("Vie",(width-250)/2+20,(height-400)/2+250);
+  rect((width-250)/2+20,(height-400)/2+255,200,15);
+  fill(50,255,75);
+  rect((width-250)/2+21,(height-400)/2+256,map(caract_perso.getInt("pv"),0,200,0,198),13);
+  
+  fill(0);
+  text("Bouclier",(width-250)/2+20,(height-400)/2+300);
+  noFill();
+  rect((width-250)/2+21,(height-400)/2+305,200,15);
+  fill(50,100,255);
+  rect((width-250)/2+22,(height-400)/2+306,map(caract_perso.getInt("resist"),0,100,0,198),13);
+  
+  fill(0);
+  text("Vitesse",(width-250)/2+20,(height-400)/2+350);
+  noFill();
+  rect((width-250)/2+21,(height-400)/2+355,200,15);
+  fill(255,50,75);
+  rect((width-250)/2+22,(height-400)/2+356,map(caract_perso.getInt("vitesse"),0,15,0,198),13);
+  
+  if(mousePressed == true){
+    if(mouseX > width/2){
+      if(personnage_choix < 2){
+        personnage_choix++;     
+      }
+    }
+    else{
+      if(personnage_choix > 0){
         personnage_choix--;  
       }
-      if(keyCode == RIGHT){
-        personnage_choix++;  
-      }
-      delay(100);
-    }   
+    }
+    delay(100);
+  }
+  if(keyPressed == true){
+    perso_OK = 1;  
     
-  } 
+  }
+  
+  
+  
+  
+}
+
+void deplacementJoueur(){
+  int vitesse = 10;
+  for(int i = 0; i < nb_joueur;i++){
+    if(joueur[i].action == 1){
+      joueur[i].y -= vitesse;  
+    }   
+    if(joueur[i].action == 2){
+      joueur[i].x += vitesse;    
+    } 
+    if(joueur[i].action == 3){
+      joueur[i].y += vitesse;    
+    } 
+    if(joueur[i].action == 4){
+      joueur[i].x -= vitesse;    
+    } 
+  }  
 }
