@@ -300,8 +300,8 @@ int tir_en_cours = 0;
 int pv = 100;
 int equipe = 1;
 
-int login_OK = 0;
-int perso_OK = 1;
+int pseudo_OK = 0;
+int perso_OK = 0;
 
 //cette variable sert à eviter les problème de répétition d'un caractère lors de la saisi du pseudo
 int antiRepet = 0;
@@ -311,21 +311,11 @@ String tchatImportant = "";
 //cette variable permet de savoir depuis combien de temps est affiché un msg important afin de l'effacer au bout d'un moment. 
 long timeTchatImportant = 0;
 
-int personnage_choix = 1;
+int personnage_choix = 0;
 
 
 long tmpSend = 0;
 
-
-//variable pour le login
-String username = "";
-String password = "";
-
-//variable qui contient l'id de champ de texte en focus lors du login
-int focusLogin = 0;
-
-//contient les eventuels message d'erreur lors du login(mdp oublié...)
-String msg_login = "";
 
 void setup(){
   size(600,600); 
@@ -431,7 +421,7 @@ void draw(){
     connect_serveur();
     //on test si l'id_client est valide pour effectuer les actions suivante
     if(id_client != -1){
-      if(login_OK == 1 && perso_OK == 1){
+      if(pseudo_OK == 1 && perso_OK == 1){
         test_commande();
       }
       setAnglePers();
@@ -441,7 +431,7 @@ void draw(){
       afficheBalle();
       
       //on affiche pas le personnage si le pseudo n'est pas affiché, pour éviter qq bug d'affichage
-      if(login_OK == 1 && perso_OK == 1){
+      if(pseudo_OK == 1 && perso_OK == 1){
         affiche_personnage();
       }
       
@@ -466,9 +456,9 @@ void draw(){
       afficheEcranFin();
      
     } 
-    if(login_OK == 0){
+    if(pseudo_OK == 0){
       //on règle le pseudo
-      login();
+      demandePseudo();
       
     }
     else if(perso_OK == 0){
@@ -510,150 +500,122 @@ void connect_serveur(){
           id_client = json.getInt("ID");  
         }
         else{
-          //on regarde maintenant le type de commande
-          if(json.getString("CMD").indexOf("move") != -1){
-            //message de base pour les déplacement(position, pv...)
-            
-            //On commence par récupérer la position de nous
-            if(abs(json.getInt("X") - xPers) > 50 || abs(json.getInt("Y") - yPers) > 50){
-              xPers = json.getInt("X");
-              yPers = json.getInt("Y");
-            }
-            
-            pv = json.getInt("pv");
-            equipe = json.getInt("equipe");
-            
-            
-            
-            
-            JSONArray posX = json.getJSONArray("pX");
-            JSONArray posY = json.getJSONArray("pY");
-            JSONArray angleTab = json.getJSONArray("pAngle");
-            JSONArray statusTab = json.getJSONArray("pStatus");
-            JSONArray pseudoTab = json.getJSONArray("pPseudo");
-            JSONArray vieTab = json.getJSONArray("pVie");
-            JSONArray equipeTab = json.getJSONArray("pEquipe");
-            JSONArray actionTab = json.getJSONArray("pAction");
-            
-            JSONArray balleX = json.getJSONArray("bX");
-            JSONArray balleY = json.getJSONArray("bY");
-            
-            //on actualise en local
-            
-            //la taille du tableau correspond au nombre de joueur
-            nb_joueur = posX.size();
-            for(int i = 0; i < nb_joueur;i++){
-              if(joueur[i].action == 0 || abs(posX.getInt(i) - joueur[i].getX()) > 20 || abs(posY.getInt(i) - joueur[i].getY()) > 20){
-                joueur[i].setX(posX.getInt(i));
-                joueur[i].setY(posY.getInt(i));
-              }
-              joueur[i].setAngle(angleTab.getInt(i));
-              joueur[i].setStatus(statusTab.getInt(i));
-              joueur[i].setPseudo(pseudoTab.getString(i));
-              joueur[i].setVie(vieTab.getInt(i));
-              joueur[i].setEquipe(equipeTab.getInt(i));
-              joueur[i].action = actionTab.getInt(i);
-            }
-            
-            //la taille du tableau correspond au nombre de balle
-            nb_balle = balleX.size();
-            for(int i = 0; i < nb_balle;i++){
-              balle[i].setX(balleX.getInt(i));  
-              balle[i].setY(balleY.getInt(i)); 
-            }
-            
-            //on récupère les informations sur les différentes bases
-            baseA.setX(json.getInt("baseAX"));
-            baseA.setY(json.getInt("baseAY"));
-            baseA.vie = json.getInt("baseAPv");
-            
-            baseB.setX(json.getInt("baseBX"));
-            baseB.setY(json.getInt("baseBY"));
-            baseB.vie = json.getInt("baseBPv");
-            
-            version_serveur = json.getFloat("version");
-                      
-            //on recupère aussi le tchat serveur
-            String newTchat = json.getString("tchat");
-            if(newTchat.charAt(0) == '#'){
-              //C'est un message important
-              //le substring sert a enlever le #
-              tchatImportant = newTchat.substring(1);
-              timeTchatImportant = millis();
-              
-              newTchat = "-";
-            }
-            
-            if(newTchat.indexOf("-") == -1){
-              //on decale tous dans le tabelau tchat pour ne garder que les derniers messages.
-              
-              for(int i = 0; i < 4;i++){
-                tchat[i] = tchat[i+1];                 
-              }
-              
-              tchat[4] = newTchat;
-              
-            }
+          //On commence par récupérer la position de nous
+          if(abs(json.getInt("X") - xPers) > 50 || abs(json.getInt("Y") - yPers) > 50){
+            xPers = json.getInt("X");
+            yPers = json.getInt("Y");
           }
-          else if(json.getString("CMD").indexOf("login") != -1){
-            //le message contient les informations de connexion pour login  
-            //on récupère les infos
-            String status_info = json.getString("info");
-            if(status_info.indexOf("USER_INCON") != -1){
-              msg_login = "Le nom d'utilisateur n'existe pas !" ; 
+          
+          pv = json.getInt("pv");
+          equipe = json.getInt("equipe");
+          
+          
+          
+          
+          JSONArray posX = json.getJSONArray("pX");
+          JSONArray posY = json.getJSONArray("pY");
+          JSONArray angleTab = json.getJSONArray("pAngle");
+          JSONArray statusTab = json.getJSONArray("pStatus");
+          JSONArray pseudoTab = json.getJSONArray("pPseudo");
+          JSONArray vieTab = json.getJSONArray("pVie");
+          JSONArray equipeTab = json.getJSONArray("pEquipe");
+          JSONArray actionTab = json.getJSONArray("pAction");
+          
+          JSONArray balleX = json.getJSONArray("bX");
+          JSONArray balleY = json.getJSONArray("bY");
+          
+          //on actualise en local
+          
+          //la taille du tableau correspond au nombre de joueur
+          nb_joueur = posX.size();
+          for(int i = 0; i < nb_joueur;i++){
+            if(joueur[i].action == 0 || abs(posX.getInt(i) - joueur[i].getX()) > 20 || abs(posY.getInt(i) - joueur[i].getY()) > 20){
+              joueur[i].setX(posX.getInt(i));
+              joueur[i].setY(posY.getInt(i));
             }
-            if(status_info.indexOf("FAIL_PASSWORD") != -1){
-              msg_login = "Le nom d'utilisateur ou le mot de passe est incorrect !" ; 
+            joueur[i].setAngle(angleTab.getInt(i));
+            joueur[i].setStatus(statusTab.getInt(i));
+            joueur[i].setPseudo(pseudoTab.getString(i));
+            joueur[i].setVie(vieTab.getInt(i));
+            joueur[i].setEquipe(equipeTab.getInt(i));
+            joueur[i].action = actionTab.getInt(i);
+          }
+          
+          //la taille du tableau correspond au nombre de balle
+          nb_balle = balleX.size();
+          for(int i = 0; i < nb_balle;i++){
+            balle[i].setX(balleX.getInt(i));  
+            balle[i].setY(balleY.getInt(i)); 
+          }
+          
+          //on récupère les informations sur les différentes bases
+          baseA.setX(json.getInt("baseAX"));
+          baseA.setY(json.getInt("baseAY"));
+          baseA.vie = json.getInt("baseAPv");
+          
+          baseB.setX(json.getInt("baseBX"));
+          baseB.setY(json.getInt("baseBY"));
+          baseB.vie = json.getInt("baseBPv");
+          
+          version_serveur = json.getFloat("version");
+                    
+          //on recupère aussi le tchat serveur
+          String newTchat = json.getString("tchat");
+          if(newTchat.charAt(0) == '#'){
+            //C'est un message important
+            //le substring sert a enlever le #
+            tchatImportant = newTchat.substring(1);
+            timeTchatImportant = millis();
+            
+            newTchat = "-";
+          }
+          
+          if(newTchat.indexOf("-") == -1){
+            //on decale tous dans le tabelau tchat pour ne garder que les derniers messages.
+            
+            for(int i = 0; i < 4;i++){
+              tchat[i] = tchat[i+1];                 
             }
-            if(status_info.indexOf("SUCCESS") != -1){
-              pseudo = username;
-              login_OK = 1;
-            }
+            
+            tchat[4] = newTchat;
             
           }
         }
       } 
     } 
-    //on envoi les infos au serveurs
-    if(login_OK == 1){
-      send_serveur();
-    }
   }  
 }
 
 void test_commande(){
-  
+  String message_cmd = "move";
   println(millis() - tmpDepla);
   if(millis() - tmpDepla > 60){
     tmpDepla = millis();
     int vitesse = 10;
     
-    //on test les colisions avant de se deplacer
+    
     
     if(key_RIGHT == 1){
-      if(detectColision(xPers + vitesse,yPers) == 0){
-        xPers += vitesse;   
-      }
+      xPers += vitesse;   
     }
     if(key_LEFT == 1){
-      if(detectColision(xPers - vitesse,yPers) == 0){
-        xPers -= vitesse; 
-      }
+      xPers -= vitesse; 
     }
     if(key_UP == 1){
-      if(detectColision(xPers,yPers-vitesse) == 0){
-        yPers -= vitesse;  
-      }
+      yPers -= vitesse;  
     }
     if(key_DOWN == 1){
-      if(detectColision(xPers,yPers + vitesse) == 0){
-        yPers += vitesse;  
-      }
+      yPers += vitesse;  
     }
     
     //on fait bouger les autres joueurs
     deplacementJoueur();
   }
+    
+    if(millis() - tmpSend > 100){
+      tmpSend = millis();
+      c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"x\": "+int(xPers)+", \"y\": "+int(yPers)+", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");    
+    }
 }
 
 void affiche_personnage(){  
@@ -972,70 +934,32 @@ void afficheBase(){
 }
 
 
-void login(){
+void demandePseudo(){
   fill(255);
-  textSize(40);
+  textSize(25);
   textAlign(CENTER);
-  text("Connexion",width/2,150);
+  text("Comment souhaites tu t'appeler?",width/2,250);
   fill(0);
-  textSize(40);
-  text("Connexion",width/2-1,150);
-  
-  
-  //on affiche les messages login(genre les erreurs et tout)
-  if(msg_login.length() > 0){
-    fill(255,200,200);
-    stroke(255,0,0);
-    
-    textSize(20);
-    
-    rect((width-(textWidth(msg_login)+20))/2,165,textWidth(msg_login)+20,30);
-    
-       
-    fill(255,0,0);
-    
-    text(msg_login,width/2,186);
-    
-  }
-  
-  stroke(0);
+  textSize(25);
+  text("Comment souhaites tu t'appeler?",width/2-1,249);
   textAlign(LEFT);
+  
   
   if(keyPressed == true && antiRepet == 0){
     antiRepet = 1;
     //on vérifie si l'utilisateur ne veux pas supprimer un caractère
     if(keyCode == LEFT){
       //Cette manipulation permet de supprimer un caractère.
-      
-      if(focusLogin == 0){
-        String newUsername = "";
-        for(int i = 0; i < username.length()-1;i++){
-          newUsername = newUsername + username.charAt(i);
-        }
-        username = newUsername;  
+      String newPseudo = "";
+      for(int i = 0; i < pseudo.length()-1;i++){
+        newPseudo = newPseudo + pseudo.charAt(i);
       }
-      else if(focusLogin == 1){
-        String newPassword = "";
-        for(int i = 0; i < password.length()-1;i++){
-          newPassword = newPassword + password.charAt(i);
-        }
-        password = newPassword;   
-      }
+      pseudo = newPseudo;  
     }
     
-    else{
-      if(focusLogin == 0){
-        if(username.length() < 9) {
-          //On limite à 9 caractères
-          username = username + key;  
-        }
-      }   
-      if(focusLogin == 1){
-        if(password.length() < 9) {
-          //On limite à 9 caractères
-          password = password + key;  
-        }
-      }
+    else if(pseudo.length() < 9){
+      //On limite à 9 caractères
+      pseudo = pseudo + key;
     }
     
   }
@@ -1044,69 +968,39 @@ void login(){
   }
   
   fill(200);
-  if(focusLogin == 0){
-    fill(150);  
-  }
-  rect((width-250)/2,(height-70)/2-50,250,70);
-  
-  fill(200);
-  if(focusLogin == 1){
-    fill(150);  
-  }
-  rect((width-250)/2,(height-70)/2+50,250,70);
+  rect((width-250)/2,(height-70)/2,250,70);
   
   fill(0);
   textSize(45);
-  text(username+"|",(width-250)/2+5,(height-70)/2);
-  
-  String textPass = "";
-  for(int i = 0; i < password.length();i++){
-    textPass += "#";  
-  }
-  text(textPass+"|",(width-250)/2+5,(height-70)/2+100);
+  text(pseudo+"|",(width-250)/2+5,(height-70)/2+50);
   
   //on affiche un bouton valider
   
   fill(0,200,0); 
   
   //la couleur(et le curseur) vari en fonction de si le curseur est sur le bouton ou non
-  if(mouseX > (width-150)/2 && mouseX < (width-150)/2 + 150 && mouseY > (height-60)/2+150 && mouseY < (height-60)/2 + 210){
+  if(mouseX > (width-150)/2 && mouseX < (width-150)/2 + 150 && mouseY > (height-60)/2+70 && mouseY < (height-60)/2 + 130){
     cursor(HAND);
     fill(0,100,0);
     
     //Si jamais on clique, ça valide
     if(mousePressed == true){
-      //on envoi une demande d'identification au serveur
-      c.write("{\"ID\": "+id_client+" , \"cmd\": \"login\", \"username\": \""+username+"\", \"password\": \""+password+"\"}");
-      delay(1000);
-
-      //il n'y a plus qu'a attendre que le serveur réponde, voir dans la fonction connect_serveur()
-      
-
+      pseudo_OK = 1;  
     }
   }
-  else if(mouseX > (width-250)/2 && mouseX < (width-250)/2 + 250 && mouseY > (height-70)/2-50 && mouseY < (height-70)/2 + 20){
+  else if(mouseX > (width-250)/2 && mouseX < (width-250)/2 + 250 && mouseY > (height-70)/2 && mouseY < (height-70)/2 + 70){
     cursor(TEXT);
-    if(mousePressed == true){
-      focusLogin = 0;  
-    }  
-  }
-  else if(mouseX > (width-250)/2 && mouseX < (width-250)/2 + 250 && mouseY > (height-70)/2+50 && mouseY < (height-70)/2 + 120){
-    cursor(TEXT);
-    if(mousePressed == true){
-      focusLogin = 1;  
-    }  
   }
   else{
     cursor(ARROW);   
   }
 
   
-  rect((width-150)/2,(height-60)/2+150,150,60);
+  rect((width-150)/2,(height-60)/2+70,150,60);
   
   textSize(30);
   fill(0);
-  text("VALIDER",(width-150)/2+13,(height-60)/2+192);
+  text("VALIDER",(width-150)/2+13,(height-60)/2+110);
   
 }
 
@@ -1297,65 +1191,9 @@ void deplacementJoueur(){
     } 
     if(joueur[i].action == 3){
       joueur[i].y += vitesse;    
-    }
+    } 
     if(joueur[i].action == 4){
       joueur[i].x -= vitesse;    
     } 
   }  
-}
-
-void send_serveur(){
-  String message_cmd = "move";
-  c.write("{\"ID\": "+id_client+" , \"cmd\": \""+message_cmd+"\", \"x\": "+int(xPers)+", \"y\": "+int(yPers)+", \"ang\": "+int(angle)+", \"pseudo\": \""+pseudo+"\", \"tir\": \""+tir_en_cours+"\"}");     
-}
-
-int detectColision(int x, int y){
-  //Colision entre le joueur et les arbres
-  //-1 = colision avec un arbre
-  //-2 = bord de map
-  //-3 = base A
-  //-4 = base B
-  //0 = Aucune colision
-  //>0 = colision avec un pers(nombre = id perso)
-  
-  //on prend chaque arbre un par un
-  for(int i = 0; i < nb_arbre;i++){
-    //on considere un arbre comme un cercle, il va donc falloir calculer la distance entre le joueur et l'arbre    
-    
-    //pythagore
-    //les -35 permettent de specifier le centre de l'arbre pas l'angle
-    float distance = sqrt(abs(x - arbre[i].x-35)*abs(x - arbre[i].x-35)+abs(y - arbre[i].y-35)*abs(y - arbre[i].y-35));
-    if(distance < 35){
-      return 1;
-    }
-  }
-
-  //On calcule la colision avec les personnages
-  for(int i = 0; i < nb_joueur; i++){
-    //On ne vas pas detecter une colision avec le joueur lui meme!!
-    if(id_client != i){
-      float distance = sqrt(abs(x - joueur[i].getX())*abs(x - joueur[i].getX())+abs(y - joueur[i].getY())*abs(y - joueur[i].getY()));
-
-      if(distance < 30){
-        return 1;  
-      }
-    }
-  }
-
-  //On calcule maintenant les collisions avec les limites de la map:
-  if(x >= 6000 || x < 0 || y >= 6000 || y < 0){
-    return 1;
-  }
-
-  //Colision avec les bases des equipes
-  if(x > baseA.getX() && x < baseA.getX() + 300 && y > baseA.getY() && y < baseA.getY() + 200){
-    return 1;
-  }
-  if(x > baseB.getX() && x < baseB.getX() + 300 && y > baseB.getY() && y < baseB.getY() + 200){
-    return 1;
-  }
-
-  return 0;
-  
-  
 }

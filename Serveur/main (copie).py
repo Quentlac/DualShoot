@@ -35,11 +35,6 @@ class Joueur:
 
 	tmpSend = 0
 
-	xp = 0
-
-	#Cette variable contient l'ID du skin que le joueur a choisi.
-	skin = 0
-
 
 	#Cette variable contient l'action en cours (UP=1, RIGHT=2, DOWN=3, LEFT=4)
 	action = 0
@@ -95,14 +90,6 @@ class Joueur:
 
 	def getPseudo(self):
 		return self.pseudo
-
-	def getXp(self):
-		return self.xp
-
-	def assXp(self, nXp):
-		self.xp += nXp
-
-	
 
 class Arbre:
 	x = 0
@@ -356,9 +343,6 @@ while True:
 			message = "{"
 			message = message + "ID:" + str(id_joueur)+","
 
-			#cmd permet d'indiquer au client le type de message
-			message = message + "CMD: \"move\","
-
 			message = message + "X:" + str(joueur[id_joueur].getPosX())+","
 			message = message + "Y:" + str(joueur[id_joueur].getPosY())+","
 
@@ -529,19 +513,13 @@ while True:
 		try:
 			json_msg = json.loads(message)
 		except ValueError:
-			print("erreur json")
 			message_valide = 0
 
 		if(message_valide == 1):
 			id_client = json_msg['ID']
-
-			cmd = json_msg['cmd']
-
-			#print(cmd)
-
 			
 			#On cree plusieurs commande
-			if(cmd.find("move") != -1):
+			if(json_msg['cmd'] == "move"):
 
 				#On regarde que le joueur soit en vie pour se deplacer ou tirer
 				#Et aussi que les bases soit encores la(Pas en fin de partie)
@@ -559,7 +537,7 @@ while True:
 					vitesse = 10
 
 
-					#cmd = json_msg['cmd']
+					cmd = json_msg['cmd']
 
 					#if(cmd.find("RIGHT") != -1):
 					#	if(detectColision(joueur[id_client].getPosX()+vitesse,joueur[id_client].getPosY(),id_client) == 0):
@@ -578,7 +556,6 @@ while True:
 					#		joueur[id_client].moveToDown(vitesse)
 
 					#on recupere les coordone
-					print(str(json_msg['x'])+","+str(json_msg['y']))
 					if(abs(json_msg['x'] - joueur[id_client].getPosX()) < 50 or abs(json_msg['y'] - joueur[id_client].getPosY()) < 50):
 						#Le serveur valide les coordone. On les enregistre si pas de colison
 						if(detectColision(json_msg['x'],json_msg['y'],id_client) == 0):
@@ -626,53 +603,7 @@ while True:
 
 						message_tchat = joueur[id_client].getPseudo() + " a rejoins la partie!"
 						print(joueur[id_client].getPseudo() + " a rejoins la partie!")
-			if(cmd.find("login") != -1):
-				username = json_msg['username']
-				password = json_msg['password']
-
-				xp = 0
-				database.execute("SELECT password,xp FROM membre WHERE pseudo='"+str(username)+"'")
-				rep = database.fetchall()
-
-				#variable qui contient le code du login(en gros SUCCESS ou FAIL)
-				status_login = "NULL"
-					
-				#Si il n'y a aucune occurence c'est que l'username est invalide
-				if(len(rep) == 0):
-					print("Username inconnu :(")
-					status_login = "USER_INCON"
-				else:
-					for loop in rep:
-						#on verifie que c'est le bon mot de passe
-						if(str(loop[0]) == password):
-							print("Mot de passe correct :)")
-							status_login = "SUCCESS"
-
-							#on recupere son XP
-							xp = loop[1]
-						else:
-							print("Mot de passe incorrect :(")
-							status_login = "FAIL_PASSWORD"
-
-				message = "{ID: "+str(id_client)+", CMD: \"login\", info: \""+status_login+"\"}"
-				#On envoi les infos au client
-				try:
-						liste_client[id_client].send(message.encode('utf-8'))
-				except socket.error:
-					print("erreur d'envoi des infos de connexion")
-
-				#On lui ajoute de l'XP pour s'etre connecte
-				xp += 10
-		
-				#Ensuite on met à jour dans la base de donne
-				database.execute("UPDATE membre SET xp="+str(xp)+" WHERE pseudo='"+str(username)+"'")
-				mysqlBdd.commit()
-			#if(cmd.find("skin") != -1):
-				#Cette commande signifie que le client demande quel perso il a debloque.	
-			
 	
-
-
 	#On fait bouger toutes les balles tirees
 	for loop in range(len(balle)):
 		#La condition si dessous permet d'eviter le bug(IndexOutOfRange) dans le cas ou l'on supprime une balle
